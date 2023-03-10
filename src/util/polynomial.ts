@@ -1,46 +1,43 @@
 import { zero_array } from "./basic";
 
-export function multiply_polynomials(
-  a: number[],
-  b: number[],
-  modulus?: number
-): number[] {
-  const result_length = a.length + b.length - 1;
-  const mul = (a: number, b: number) =>
-    modulus === undefined ? a * b : (a * b) % modulus;
-  const add = (a: number, b: number) =>
-    modulus === undefined ? a + b : (a + b) % modulus;
-  return a
-    .map((x, x_index) => {
-      const r = b.map((y) => mul(x, y));
-      const front = zero_array(x_index);
-      const back = zero_array(result_length - b.length - x_index);
-      return front.concat(r, back);
-    })
-    .reduce((a, b) => a.map((v, vi) => add(v, b[vi])));
-}
-/**
- *
- * @param p Coefficients of the polynomial, in order [x^0, x^1, ...]
- * @param x The point at which to evaluate the polynomial
- * @param modulus If not `undefined`, return the result modulo `modulus`
- * @returns The evaluated point `x` in the polynomial `p`
- */
-export function evaluate_polynomial(
-  p: number[],
-  x: number,
-  modulus?: number
-): number {
-  if (x == 0) return p[0];
-  const x_powers = [1];
+export type HandlerType<T> = {
+  mul: (a: T, b: T) => T;
+  add: (a: T, b: T) => T;
+  zero: () => T;
+};
 
-  const mul = (x: number, y: number) =>
-    modulus === undefined ? x * y : (x * y) % modulus;
-  const add = (x: number, y: number) =>
-    modulus === undefined ? x + y : (x + y) % modulus;
-
-  for (const _ in p.slice(1)) {
-    x_powers.push(mul(x_powers[x_powers.length - 1], x));
+export class Polynomial<T> {
+  coefficients: T[];
+  handler: HandlerType<T>;
+  constructor(coefficients: T[], handler: HandlerType<T>) {
+    this.coefficients = coefficients;
+    this.handler = handler;
   }
-  return p.map((v, i) => mul(v, x_powers[i])).reduce((a, b) => add(a, b));
+
+  multiply(other: Polynomial<T>): Polynomial<T> {
+    const result_length =
+      this.coefficients.length + other.coefficients.length - 1;
+    const new_coeffs = this.coefficients
+      .map((x, x_index) => {
+        const r = other.coefficients.map((y) => this.handler.mul(x, y));
+        const front = zero_array(x_index).map(this.handler.zero);
+        const back = zero_array(
+          result_length - other.coefficients.length - x_index
+        ).map(this.handler.zero);
+        return front.concat(r, back);
+      })
+      .reduce((a, b) => a.map((v, vi) => this.handler.add(v, b[vi])));
+    return new Polynomial(new_coeffs, this.handler);
+  }
+
+  evaluate(x: T): T {
+    const x_powers = [x];
+
+    for (const _ in this.coefficients.slice(1)) {
+      x_powers.push(this.handler.mul(x_powers[x_powers.length - 1], x));
+    }
+    return this.coefficients
+      .map((v, i) => this.handler.mul(v, x_powers[i]))
+      .reduce((a, b) => this.handler.add(a, b));
+  }
 }
