@@ -23,14 +23,20 @@
 </template>
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { str2hex, share } from "secrets.js-grempe";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElSlider, ElInput } from "element-plus";
 import { useOutputConfigStore } from "../store";
+import { SSS } from "../util/sss";
+
 const shareCount = ref(1);
 const sharedText = ref("There is no heaven");
 
 const shares = computed(() => {
-  return share(str2hex(sharedText.value), shareCount.value, shareCount.value);
+  const encoder = new TextEncoder();
+  const secret = encoder.encode(sharedText.value);
+  const share_gen = SSS.from_secret(secret, shareCount.value);
+  return [...new Array(shareCount.value)].map((v) =>
+    share_gen.get_share(v + 1)
+  );
 });
 
 const outputFormatStore = useOutputConfigStore();

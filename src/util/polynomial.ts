@@ -30,6 +30,19 @@ export class Polynomial<T> {
     return new Polynomial(new_coeffs, this.handler);
   }
 
+  add(other: Polynomial<T>): Polynomial<T> {
+    const result_coefficients = zero_array(
+      Math.max(this.coefficients.length, other.coefficients.length)
+    ).map(this.handler.zero);
+    for (let i = 0; i < result_coefficients.length; i++) {
+      result_coefficients[i] = this.handler.add(
+        this.coefficients[i] ?? this.handler.zero(),
+        other.coefficients[i] ?? this.handler.zero()
+      );
+    }
+    return new Polynomial(result_coefficients, this.handler);
+  }
+
   evaluate(x: T): T {
     const x_powers = [x];
 

@@ -29,9 +29,9 @@
 </template>
 
 <script setup lang="ts">
+import { ElInput, ElInputNumber, ElProgress } from "element-plus";
 import { computed, ref, watch } from "vue";
-import { combine, hex2str, init as sss_init } from "secrets.js-grempe";
-sss_init(8, "browserCryptoGetRandomValues");
+import { SSS } from "../util/sss";
 const shares = ref([] as { key_id: number | undefined; key: string }[]);
 const shares_has_empty_field = computed(
   () =>
