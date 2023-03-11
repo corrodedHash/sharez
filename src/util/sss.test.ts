@@ -1,11 +1,17 @@
-import { expect, test } from "vitest";
+import { expect, test, describe } from "vitest";
 import { SSS } from "./sss";
 
-test("Secret sharing sanity check", () => {
+describe("Secret sharing sanity check", () => {
   const share_gen = SSS.from_secret(Uint8Array.from([1]), 2);
+
+  test("Secret is stored correctly", () => {
+    expect(share_gen.get_secret()).toEqual(Uint8Array.from([1]));
+  });
+
   const shares = [share_gen.get_share(17), share_gen.get_share(101)];
   const reconstructed = SSS.from_shares(shares, [17, 101]);
-  console.log(reconstructed.polynomials[0].coefficients);
-  console.log(share_gen.polynomials[0].coefficients);
-  expect(reconstructed.get_secret()).toEqual(Uint8Array.from([1]));
+
+  test("SSS reconstructed correctly", () => {
+    expect(reconstructed.get_secret()).toEqual(Uint8Array.from([1]));
+  });
 });

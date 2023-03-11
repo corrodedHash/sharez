@@ -9,7 +9,7 @@ const GF256Handler: HandlerType<GF256Element> = {
   mul: (a, b) => a.mul(b),
   div: (a, b) => a.div(b),
   zero: () => new GF256Element(0),
-  one: () => new GF256Element(0),
+  one: () => new GF256Element(1),
 };
 
 type GF256Polynomial = Polynomial<GF256Element>;

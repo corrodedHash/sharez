@@ -47,7 +47,7 @@ export class Polynomial<T> {
   }
 
   evaluate(x: T): T {
-    const x_powers = [x];
+    const x_powers = [this.handler.one()];
 
     this.coefficients.slice(1).forEach(() => {
       x_powers.push(this.handler.mul(x_powers[x_powers.length - 1], x));

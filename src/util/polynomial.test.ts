@@ -19,12 +19,13 @@ test("Polynomial sanity check", () => {
   expect(b.multiply(new Polynomial([2], IntegerHandler))).toEqual(
     new Polynomial([0, -2, 0, 2], IntegerHandler)
   );
+  expect(xp1.evaluate(0)).toEqual(1);
 });
 
 test("Interpolation", () => {
-  // expect(interpolate([-1, 0, 1], [2, 1, 2], IntegerHandler)).toEqual(
-  //   new Polynomial([1, 0, 1], IntegerHandler)
-  // );
+  expect(interpolate([-1, 0, 1], [2, 1, 2], IntegerHandler)).toEqual(
+    new Polynomial([1, 0, 1], IntegerHandler)
+  );
   const cubic = interpolate([-1, 0, 1, 2], [-1, 0, 1, 8], IntegerHandler);
   cubic.coefficients = cubic.coefficients.map(Math.round);
   expect(cubic).toEqual(new Polynomial([0, 0, 0, 1], IntegerHandler));
