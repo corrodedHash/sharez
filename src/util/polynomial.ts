@@ -49,9 +49,9 @@ export class Polynomial<T> {
   evaluate(x: T): T {
     const x_powers = [x];
 
-    for (const _ in this.coefficients.slice(1)) {
+    this.coefficients.slice(1).forEach(() => {
       x_powers.push(this.handler.mul(x_powers[x_powers.length - 1], x));
-    }
+    });
     return this.coefficients
       .map((v, i) => this.handler.mul(v, x_powers[i]))
       .reduce((a, b) => this.handler.add(a, b));
@@ -86,7 +86,6 @@ export function interpolate<T>(
     const result = numerator.multiply(
       new Polynomial([handler.div(handler.one(), denominator)], handler)
     );
-    console.log(chosen_x, denominator, numerator, result);
     return result;
   }
 
