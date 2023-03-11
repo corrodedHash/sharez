@@ -5,8 +5,11 @@ import { GF256Element } from "./GF256";
 
 const GF256Handler: HandlerType<GF256Element> = {
   add: (a, b) => a.add(b),
+  sub: (a, b) => a.add(b),
   mul: (a, b) => a.mul(b),
+  div: (a, b) => a.div(b),
   zero: () => new GF256Element(0),
+  one: () => new GF256Element(0),
 };
 
 type GF256Polynomial = Polynomial<GF256Element>;

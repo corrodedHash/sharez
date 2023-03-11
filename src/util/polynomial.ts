@@ -2,8 +2,11 @@ import { zero_array } from "./basic";
 
 export type HandlerType<T> = {
   mul: (a: T, b: T) => T;
+  div: (a: T, b: T) => T;
   add: (a: T, b: T) => T;
+  sub: (a: T, b: T) => T;
   zero: () => T;
+  one: () => T;
 };
 
 export class Polynomial<T> {
@@ -53,4 +56,43 @@ export class Polynomial<T> {
       .map((v, i) => this.handler.mul(v, x_powers[i]))
       .reduce((a, b) => this.handler.add(a, b));
   }
+}
+
+export function interpolate<T>(
+  x_values: T[],
+  y_values: T[],
+  handler: HandlerType<T>
+): Polynomial<T> {
+  if (x_values.length === 1) {
+    return new Polynomial(y_values, handler);
+  }
+  function lagrange_base(index: number): Polynomial<T> {
+    const chosen_x = x_values[index];
+    const filtered_x = x_values.filter((_, v_index) => v_index !== index);
+
+    const denominator = filtered_x
+      .map((v) => handler.sub(chosen_x, v))
+      .reduce((a, b) => handler.mul(a, b));
+
+    const numerator = filtered_x
+      .map(
+        (v) =>
+          new Polynomial(
+            [handler.sub(handler.zero(), v), handler.one()],
+            handler
+          )
+      )
+      .reduce((a, b) => a.multiply(b));
+    const result = numerator.multiply(
+      new Polynomial([handler.div(handler.one(), denominator)], handler)
+    );
+    console.log(chosen_x, denominator, numerator, result);
+    return result;
+  }
+
+  const bases = y_values.map((v, index) =>
+    lagrange_base(index).multiply(new Polynomial([v], handler))
+  );
+
+  return bases.reduce((a, b) => a.add(b));
 }
