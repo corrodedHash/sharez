@@ -9,23 +9,22 @@
       :show-tooltip="false"
     />
     <el-input v-model="sharedText" type="text" />
-    <div v-if="sharedText.length > 0" class="shareBox">
-      <div
-        v-for="(s, index) in shares"
-        :key="index"
-        class="share"
-        @click="handleShareClick"
-      >
-        {{ s }}
-      </div>
-    </div>
+    <transition-group
+      v-if="sharedText.length > 0"
+      name="shareList"
+      tag="div"
+      class="shareBox"
+    >
+      <output-box v-for="(s, index) in shares" :key="index" :value="s" />
+    </transition-group>
   </div>
 </template>
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { ElMessage, ElSlider, ElInput } from "element-plus";
-import { useOutputConfigStore } from "../store";
+import { ElSlider, ElInput } from "element-plus";
 import { SSS } from "../util/sss";
+import OutputBox from "./OutputBox.vue";
+import { ShareFormatter } from "../util/ShareFormatter";
 
 const shareCount = ref(1);
 const sharedText = ref("There is no heaven");
@@ -34,26 +33,11 @@ const shares = computed(() => {
   const encoder = new TextEncoder();
   const secret = encoder.encode(sharedText.value);
   const share_gen = SSS.from_secret(secret, shareCount.value);
-  return [...new Array(shareCount.value)].map((v) =>
-    share_gen.get_share(v + 1)
+
+  return [...[...new Array(shareCount.value)].keys()].map((v) =>
+    new ShareFormatter(v + 1, share_gen.get_share(v + 1)).toString()
   );
 });
-
-const outputFormatStore = useOutputConfigStore();
-
-const handleShareClick = (e: MouseEvent) => {
-  if (e.target === null) return;
-  const d = e.target as HTMLDivElement;
-  window.getSelection()?.selectAllChildren(d);
-  navigator.clipboard.writeText(d.innerText);
-
-  ElMessage({
-    message: "Copied",
-    type: "info",
-    grouping: true,
-    duration: 1500,
-  });
-};
 </script>
 <style scoped>
 .container {
@@ -68,16 +52,18 @@ const handleShareClick = (e: MouseEvent) => {
   max-width: 100%;
 }
 
-.share {
-  font-family: monospace;
-  font-size: larger;
-  overflow-x: scroll;
-  scrollbar-width: none;
-  padding: 0.2em;
-  text-align: center;
-  padding-right: 1em;
-  border: 2px solid red;
-  border-radius: 0.2em;
-  margin-top: 0.2em;
+.shareList-enter-active,
+.shareList-leave-active {
+  transition: all 0.5s ease;
+}
+
+.shareList-enter-from {
+  opacity: 0;
+  transform: rotateX(90deg) translateX(2em);
+}
+
+.shareList-leave-to {
+  opacity: 0;
+  transform: scale(0);
 }
 </style>

@@ -12,7 +12,11 @@ const GF256Handler: HandlerType<GF256Element> = {
   one: () => new GF256Element(1),
 };
 
-type GF256Polynomial = Polynomial<GF256Element>;
+class GF256Polynomial extends Polynomial<GF256Element> {
+  constructor(coefficients: GF256Element[]) {
+    super(coefficients, GF256Handler);
+  }
+}
 
 /**
  * @param x_values X values of the points used for interpolating the polynomial
@@ -55,7 +59,7 @@ export class SSS {
     this.polynomials = polynomials;
   }
 
-  public static from_secret(secret: Uint8Array, threshold: number): SSS {
+  static from_secret(secret: Uint8Array, threshold: number): SSS {
     const polynomials = Array.from(secret)
       .map((v) => [
         new GF256Element(v),
@@ -63,11 +67,11 @@ export class SSS {
           () => new GF256Element(getRandomInt(0, 256))
         ),
       ])
-      .map((v) => new Polynomial(v, GF256Handler));
+      .map((v) => new GF256Polynomial(v));
     return new SSS(polynomials);
   }
 
-  public static from_shares(shares: Uint8Array[], share_ids: number[]): SSS {
+  static from_shares(shares: Uint8Array[], share_ids: number[]): SSS {
     // `shares[0]` is the share of the first user, `transposed_shares[0]` is the first byte of each share
     const transposed_shares = Array.from(shares[0]).map((_, colIndex) =>
       shares.map((row) => row[colIndex])

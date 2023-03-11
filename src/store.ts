@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-export const outputFormats = ["decimal", "hex"] as const;
+export const outputFormats = ["decimal", "hex", "base64"] as const;
 export type OutputFormat = (typeof outputFormats)[number];
 
 export const useOutputConfigStore = defineStore("outputConfig", {
