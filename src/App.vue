@@ -9,31 +9,20 @@
       ></el-switch>
     </el-header>
     <el-main>
-      <router-view v-slot="{ Component }">
-        <keep-alive>
-          <component :is="Component" />
-        </keep-alive>
-      </router-view>
+      <keep-alive>
+        <component :is="onShare ? TextSplitter : TextMerger" />
+      </keep-alive>
     </el-main>
   </el-container>
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from "vue";
+import { ref } from "vue";
 import { Key, Scissor } from "@element-plus/icons-vue";
 import { ElHeader, ElSwitch, ElContainer, ElMain } from "element-plus";
-import { useRoute, useRouter } from "vue-router";
-const route = useRoute();
-const router = useRouter();
+import TextSplitter from "./components/TextSplitter.vue";
+import TextMerger from "./components/TextMerger.vue";
 
-const onShare = ref(route.path === "/share" || route.path === "/");
-
-watch(onShare, (v) => {
-  if (v) {
-    router.push("/share");
-  } else {
-    router.push("/merge");
-  }
-});
+const onShare = ref(true);
 </script>
 <style scoped></style>

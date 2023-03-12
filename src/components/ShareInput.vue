@@ -30,7 +30,6 @@ const share = computed(() => {
   }
 });
 const formattedData = computed(() => {
-  console.log(share.value)
   return share.value !== undefined && share.value.share_id !== undefined;
 });
 
