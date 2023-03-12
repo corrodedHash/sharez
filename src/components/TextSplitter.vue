@@ -50,6 +50,7 @@ const shares = computed(() => {
 .shareBox {
   margin-top: 2em;
   max-width: 100%;
+  overflow-x: hidden;
 }
 
 .shareList-enter-active,

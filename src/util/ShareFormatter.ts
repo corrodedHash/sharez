@@ -14,9 +14,8 @@ export class ShareFormatter {
       return new ShareFormatter(data[0], Uint8Array.from(data.slice(1)));
     }
 
-    const encoder = new TextEncoder();
-    const data = encoder.encode(atob(input));
-    return new ShareFormatter(undefined, data.slice(1));
+    const data = [...atob(input)].map((v) => v.charCodeAt(0));
+    return new ShareFormatter(undefined, Uint8Array.from(data.slice(1)));
   }
   toString(): string {
     if (this.share_id === undefined) {

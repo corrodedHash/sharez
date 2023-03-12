@@ -22,12 +22,24 @@ const emits = defineEmits<{
 
 const key_id = ref(undefined as undefined | number);
 const data = ref("");
-const formattedData = computed(
-  () => ShareFormatter.fromString(data.value).share_id !== undefined
-);
+const share = computed(() => {
+  try {
+    return ShareFormatter.fromString(data.value);
+  } catch {
+    return undefined;
+  }
+});
+const formattedData = computed(() => {
+  console.log(share.value)
+  return share.value !== undefined && share.value.share_id !== undefined;
+});
 
-watch(data, (v) => {
-  const f = ShareFormatter.fromString(v);
+watch(data, () => {
+  const f = share.value;
+  if (f === undefined) {
+    emits("update:modelValue", undefined);
+    return;
+  }
   if (f.share_id !== undefined) {
     key_id.value = f.share_id;
   }

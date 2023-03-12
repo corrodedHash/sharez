@@ -20,6 +20,7 @@ const handleShareClick = (e: MouseEvent) => {
     type: "info",
     grouping: true,
     duration: 1500,
+    showClose:true
   });
 };
 </script>

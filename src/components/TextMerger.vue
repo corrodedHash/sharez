@@ -1,11 +1,28 @@
 <template>
   <div>
-    <div class="shareInput">
-      <el-input />
+    <div class="resultBox">
+      <Transition name="resultBox">
+        <el-progress
+          v-if="typeof decrypted !== 'string'"
+          type="circle"
+          class="progressCircle"
+          :status="undefined"
+          :percentage="
+            Math.min(
+              Math.round((filtered_shares.length / shareCount) * 100),
+              100
+            )
+          "
+        />
+        <span v-else class="resultText">
+          {{ decrypted }}
+        </span>
+      </Transition>
     </div>
-    <span
-      >Shares: <el-input-number v-model="shareCount" type="number" :min="1" />
-    </span>
+
+    <div>
+      Shares: <el-input-number v-model="shareCount" type="number" :min="1" />
+    </div>
     <TransitionGroup name="list" tag="div">
       <share-input
         v-for="{ index } in sorted_test"
@@ -13,20 +30,11 @@
         @update:model-value="updateShare(index, $event)"
       />
     </TransitionGroup>
-
-    <el-progress
-      type="circle"
-      :status="undefined"
-      :percentage="
-        Math.min(Math.round((filtered_shares.length / shareCount) * 100), 100)
-      "
-    />
-    {{ decrypted }}
   </div>
 </template>
 
 <script setup lang="ts">
-import { ElInput, ElInputNumber, ElProgress } from "element-plus";
+import { ElInputNumber, ElProgress } from "element-plus";
 import { computed, ref, watch } from "vue";
 import { SSS } from "../util/sss";
 import ShareInput from "./ShareInput.vue";
@@ -108,5 +116,39 @@ const sorted_test = computed(() => {
 <style scoped>
 .list-move {
   transition: all 0.5s ease;
+}
+.resultBox {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  height: 10em;
+}
+
+.resultBox-leave-active.progressCircle,
+.resultBox-enter-active.resultText {
+  transition: transform 0.5s ease-in;
+}
+.resultBox-leave-active.resultText,
+.resultBox-enter-active.progressCircle {
+  transition: transform 0.2s ease-out;
+}
+
+.progressCircle,
+.resultText {
+  transform-style: preserve-3d;
+  transform-origin: center center 50px;
+}
+.resultBox-enter-from.progressCircle,
+.resultBox-leave-to.progressCircle {
+  transform: rotateY(90deg);
+}
+.resultBox-enter-from.resultText,
+.resultBox-leave-to.resultText {
+  transform: rotateY(-90deg);
+}
+
+.resultText {
+  position: absolute;
 }
 </style>
