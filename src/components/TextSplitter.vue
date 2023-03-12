@@ -27,7 +27,7 @@ import OutputBox from "./OutputBox.vue";
 import { ShareFormatter } from "../util/ShareFormatter";
 
 const shareCount = ref(1);
-const sharedText = ref("There is no heaven");
+const sharedText = ref("一夫当关 万夫莫开");
 
 const shares = computed(() => {
   const encoder = new TextEncoder();

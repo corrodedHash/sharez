@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from "vue";
 import { ShareFormatter } from "../util/ShareFormatter";
-
+import { ElInput, ElInputNumber } from "element-plus";
 const emits = defineEmits<{
   (
     e: "update:modelValue",
