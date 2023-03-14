@@ -1,25 +1,12 @@
 <template>
-  <div>
-    <div class="resultBox">
-      <Transition name="resultBox">
-        <el-progress
-          v-if="typeof decrypted !== 'string'"
-          type="circle"
-          class="progressCircle"
-          :status="undefined"
-          :percentage="
-            Math.min(
-              Math.round((filtered_shares.length / shareCount) * 100),
-              100
-            )
-          "
-        />
-        <span v-else class="resultText">
-          {{ decrypted }}
-        </span>
-      </Transition>
-    </div>
-
+  <div class="mergeBox">
+    <MergeProgress
+      :decrypted="typeof decrypted === 'string' ? decrypted : undefined"
+      :progress-ratio="[
+        Math.min(shareCount, filtered_shares.length),
+        shareCount,
+      ]"
+    />
     <div>
       Shares: <el-input-number v-model="shareCount" type="number" :min="1" />
     </div>
@@ -34,10 +21,11 @@
 </template>
 
 <script setup lang="ts">
-import { ElInputNumber, ElProgress } from "element-plus";
+import { ElInputNumber } from "element-plus";
 import { computed, ref, watch } from "vue";
 import { SSS } from "../util/sss";
 import ShareInput from "./ShareInput.vue";
+import MergeProgress from "./MergeProgress.vue";
 
 const shares = ref([] as ({ key_id: number; key: Uint8Array } | undefined)[]);
 const updateShare = (
@@ -117,38 +105,11 @@ const sorted_test = computed(() => {
 .list-move {
   transition: all 0.5s ease;
 }
-.resultBox {
+.mergeBox {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
+  justify-items: center;
   align-items: center;
-  height: 10em;
-}
-
-.resultBox-leave-active.progressCircle,
-.resultBox-enter-active.resultText {
-  transition: transform 0.5s ease-in;
-}
-.resultBox-leave-active.resultText,
-.resultBox-enter-active.progressCircle {
-  transition: transform 0.2s ease-out;
-}
-
-.progressCircle,
-.resultText {
-  transform-style: preserve-3d;
-  transform-origin: center center 50px;
-}
-.resultBox-enter-from.progressCircle,
-.resultBox-leave-to.progressCircle {
-  transform: rotateY(90deg);
-}
-.resultBox-enter-from.resultText,
-.resultBox-leave-to.resultText {
-  transform: rotateY(-90deg);
-}
-
-.resultText {
-  position: absolute;
 }
 </style>
