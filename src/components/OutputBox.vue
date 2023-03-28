@@ -10,27 +10,27 @@
 </template>
 
 <script setup lang="ts">
-import { ElIcon } from "element-plus";
-import { CopyDocument } from "@element-plus/icons-vue";
-import { ref } from "vue";
+import { ElIcon } from 'element-plus'
+import { CopyDocument } from '@element-plus/icons-vue'
+import { ref } from 'vue'
 
-const props = defineProps<{ value: string }>();
-const recentlyCopied = ref(null as null | number);
+const props = defineProps<{ value: string }>()
+const recentlyCopied = ref(null as null | number)
 
 const handleShareClick = (e: MouseEvent) => {
-  if (e.target === null) return;
-  const d = e.target as HTMLDivElement;
-  window.getSelection()?.selectAllChildren(d);
-  navigator.clipboard.writeText(d.innerText);
+  if (e.target === null) return
+  const d = e.target as HTMLDivElement
+  window.getSelection()?.selectAllChildren(d)
+  navigator.clipboard.writeText(d.innerText)
 
   if (recentlyCopied.value !== null) {
-    clearTimeout(recentlyCopied.value);
-    recentlyCopied.value = null;
+    clearTimeout(recentlyCopied.value)
+    recentlyCopied.value = null
   }
   recentlyCopied.value = setTimeout(() => {
-    recentlyCopied.value = null;
-  }, 1500) as unknown as number;
-};
+    recentlyCopied.value = null
+  }, 1500) as unknown as number
+}
 </script>
 
 <style scoped>

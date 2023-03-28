@@ -17,12 +17,12 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
-import { Key, Scissor } from "@element-plus/icons-vue";
-import { ElHeader, ElSwitch, ElContainer, ElMain } from "element-plus";
-import TextSplitter from "./components/TextSplitter.vue";
-import TextMerger from "./components/TextMerger.vue";
+import { ref } from 'vue'
+import { Key, Scissor } from '@element-plus/icons-vue'
+import { ElHeader, ElSwitch, ElContainer, ElMain } from 'element-plus'
+import TextSplitter from './components/TextSplitter.vue'
+import TextMerger from './components/TextMerger.vue'
 
-const onShare = ref(true);
+const onShare = ref(true)
 </script>
 <style scoped></style>

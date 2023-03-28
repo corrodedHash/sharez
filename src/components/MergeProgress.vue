@@ -15,19 +15,16 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed } from "vue";
-import { ElProgress } from "element-plus";
+import { computed } from 'vue'
+import { ElProgress } from 'element-plus'
 const props = defineProps<{
-  decrypted: string | null;
-  progressRatio: [number, number];
-}>();
+  decrypted: string | null
+  progressRatio: [number, number]
+}>()
 
 const progressPercentage = computed(() =>
-  Math.min(
-    Math.round((props.progressRatio[0] / props.progressRatio[1]) * 100),
-    100
-  )
-);
+  Math.min(Math.round((props.progressRatio[0] / props.progressRatio[1]) * 100), 100)
+)
 </script>
 
 <style scoped>

@@ -9,35 +9,30 @@
       :show-tooltip="false"
     />
     <el-input v-model="sharedText" type="text" />
-    <transition-group
-      v-if="sharedText.length > 0"
-      name="shareList"
-      tag="div"
-      class="shareBox"
-    >
+    <transition-group v-if="sharedText.length > 0" name="shareList" tag="div" class="shareBox">
       <output-box v-for="(s, index) in shares" :key="index" :value="s" />
     </transition-group>
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { ElSlider, ElInput } from "element-plus";
-import { SSS } from "../util/sss";
-import OutputBox from "./OutputBox.vue";
-import { ShareFormatter } from "../util/ShareFormatter";
+import { computed, ref } from 'vue'
+import { ElSlider, ElInput } from 'element-plus'
+import { SSS } from '../util/sss'
+import OutputBox from './OutputBox.vue'
+import { ShareFormatter } from '../util/ShareFormatter'
 
-const shareCount = ref(1);
-const sharedText = ref("一夫当关 万夫莫开");
+const shareCount = ref(1)
+const sharedText = ref('一夫当关 万夫莫开')
 
 const shares = computed(() => {
-  const encoder = new TextEncoder();
-  const secret = encoder.encode(sharedText.value);
-  const share_gen = SSS.from_secret(secret, shareCount.value);
+  const encoder = new TextEncoder()
+  const secret = encoder.encode(sharedText.value)
+  const share_gen = SSS.from_secret(secret, shareCount.value)
 
   return [...[...new Array(shareCount.value)].keys()].map((v) =>
     new ShareFormatter(v + 1, share_gen.get_share(v + 1)).toString()
-  );
-});
+  )
+})
 </script>
 <style scoped>
 .container {
