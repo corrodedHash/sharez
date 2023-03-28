@@ -1,7 +1,7 @@
 <template>
   <div class="mergeBox">
     <MergeProgress
-      :decrypted="typeof decrypted === 'string' ? decrypted : undefined"
+      :decrypted="typeof decrypted === 'string' ? decrypted : null"
       :progress-ratio="[
         Math.min(shareCount, filtered_shares.length),
         shareCount,

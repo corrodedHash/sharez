@@ -18,7 +18,7 @@
 import { computed } from "vue";
 import { ElProgress } from "element-plus";
 const props = defineProps<{
-  decrypted: string | undefined;
+  decrypted: string | null;
   progressRatio: [number, number];
 }>();
 
