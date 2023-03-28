@@ -19,8 +19,8 @@
 import { ElInputNumber } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { SSS } from '../util/sss'
-import ShareInput from './ShareInput.vue'
-import MergeProgress from './MergeProgress.vue'
+import ShareInput from '@/components/ShareInput.vue'
+import MergeProgress from '@/components/MergeProgress.vue'
 
 const shares = ref([] as ({ key_id: number; key: Uint8Array } | undefined)[])
 const updateShare = (index: number, share: { data: Uint8Array; id: number } | undefined) => {

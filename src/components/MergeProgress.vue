@@ -41,7 +41,7 @@ const progressPercentage = computed(() =>
   transition: transform 0.5s ease-in;
 }
 
-.resultBox-enter-active {
+.resultBox-leave-active {
   position: absolute;
 }
 

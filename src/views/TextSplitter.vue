@@ -18,10 +18,10 @@
 import { computed, ref } from 'vue'
 import { ElSlider, ElInput } from 'element-plus'
 import { SSS } from '../util/sss'
-import OutputBox from './OutputBox.vue'
+import OutputBox from '@/components/OutputBox.vue'
 import { ShareFormatter } from '../util/ShareFormatter'
 
-const shareCount = ref(1)
+const shareCount = ref(2)
 const sharedText = ref('一夫当关 万夫莫开')
 
 const shares = computed(() => {
