@@ -1,6 +1,7 @@
 import { getRandomInt } from "./basic";
 
-import { Polynomial, HandlerType } from "./polynomial";
+import type { HandlerType } from "./polynomial";
+import { Polynomial } from "./polynomial";
 import { GF256Element } from "./GF256";
 
 const GF256Handler: HandlerType<GF256Element> = {

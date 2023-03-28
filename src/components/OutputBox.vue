@@ -34,16 +34,16 @@ const handleShareClick = (e: MouseEvent) => {
 </script>
 
 <style scoped>
-.copy-enter-active{
+.copy-enter-active {
   transition: all 0.1s ease-in;
 }
 .copy-leave-active {
   transition: all 1s ease-out;
 }
 
-.copy-enter-from{
+.copy-enter-from {
   opacity: 0;
-  transform: translateX(1em)
+  transform: translateX(1em);
 }
 .copy-leave-to {
   opacity: 0;
