@@ -2,7 +2,7 @@
   <div class="share" @click="handleShareClick">
     {{ props.value }}
     <Transition name="copy">
-      <span v-if="recentlyCopied" class="copyNotification">
+      <span v-if="recentlyCopied !== null" class="copyNotification">
         <el-icon><CopyDocument /></el-icon>
       </span>
     </Transition>
@@ -34,20 +34,26 @@ const handleShareClick = (e: MouseEvent) => {
 </script>
 
 <style scoped>
-copy-enter-active,
+.copy-enter-active{
+  transition: all 0.1s ease-in;
+}
 .copy-leave-active {
-  transition: opacity 0.5s ease;
+  transition: all 1s ease-out;
 }
 
-.copy-enter-from,
+.copy-enter-from{
+  opacity: 0;
+  transform: translateX(1em)
+}
 .copy-leave-to {
   opacity: 0;
 }
 
 .copyNotification {
+  /* border-radius: 0.3em; */
   position: absolute;
   right: 0;
-  background: white;
+  background: lightgray;
   padding-left: 1em;
   padding-right: 0.5em;
   margin-right: 0.2em;
