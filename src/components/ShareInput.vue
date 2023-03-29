@@ -4,13 +4,31 @@
     <el-input v-model="data" />
   </div>
 </template>
+
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { ShareFormatter } from '../util/ShareFormatter'
 import { ElInput, ElInputNumber } from 'element-plus'
-const emits = defineEmits<{
-  (e: 'update:modelValue', share: undefined | { data: Uint8Array; id: number }): void
+import type { ShareInfo } from './ShareInfo'
+const props = defineProps<{
+  share?: undefined | ShareInfo
 }>()
+
+const emits = defineEmits<{
+  (e: 'update:modelValue', share: undefined | ShareInfo): void
+}>()
+
+watch(
+  () => props.share,
+  (v) => {
+    if (v === undefined) return
+    const f = new ShareFormatter(v.id, v.data)
+    key_id.value = v.id
+    data.value = f.toString()
+    console.log(v)
+  },
+  { immediate: true }
+)
 
 const key_id = ref(undefined as undefined | number)
 const data = ref('')

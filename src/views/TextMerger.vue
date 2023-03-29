@@ -4,13 +4,11 @@
       :decrypted="typeof decrypted === 'string' ? decrypted : null"
       :progress-ratio="[Math.min(shareCount, filtered_shares.length), shareCount]"
     />
+    <div v-if="decryption_errored !== undefined">{{ decryption_errored }}</div>
     <div>Shares: <el-input-number v-model="shareCount" type="number" :min="1" /></div>
+    {{ shares }}
     <TransitionGroup name="list" tag="div">
-      <share-input
-        v-for="{ index } in sorted_test"
-        :key="index"
-        @update:model-value="updateShare(index, $event)"
-      />
+      <share-input v-for="{ index } in sorted_test" :key="index" v-model="shares[index]" />
     </TransitionGroup>
   </div>
 </template>
@@ -18,37 +16,38 @@
 <script setup lang="ts">
 import { ElInputNumber } from 'element-plus'
 import { computed, ref, watch } from 'vue'
-import { SSS } from '../util/sss'
+import { SSS } from '@/util/sss'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
+import type { ShareInfo } from '@/components/ShareInfo'
 
-const shares = ref([] as ({ key_id: number; key: Uint8Array } | undefined)[])
-const updateShare = (index: number, share: { data: Uint8Array; id: number } | undefined) => {
-  shares.value[index] = share === undefined ? undefined : { key_id: share.id, key: share.data }
-}
+const shares = ref([] as (ShareInfo | undefined)[])
 
 const shares_has_empty_field = computed(
   () => shares.value.find((v) => v === undefined) !== undefined
 )
 
-const filtered_shares = computed(
-  () =>
-    shares.value.filter((v) => v !== undefined) as {
-      key_id: number
-      key: Uint8Array
-    }[]
+const decryption_errored = computed(() =>
+  decrypted.value instanceof Error ? decrypted.value.message : undefined
+)
+
+const filtered_shares = computed(() =>
+  shares.value.filter((v): v is Exclude<typeof v, undefined> => v !== undefined)
 )
 
 const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
-  const x_values = filtered_shares.value.map(({ key_id }) => key_id)
+  console.log(filtered_shares.value)
+  const x_values = filtered_shares.value.map(({ id }) => id)
   const a = new Set(x_values)
   if (a.size !== x_values.length) {
     return new Error('Contains equal share IDs')
   }
-  const y_values = filtered_shares.value.map(({ key }) => key)
+  const y_values = filtered_shares.value.map(({ data }) => data)
+  console.log(filtered_shares.value)
+  console.log(y_values)
   const result_length = y_values[0].length
   const wrong_size = y_values.findIndex((v) => v.length !== result_length)
   if (wrong_size !== -1) {
@@ -58,12 +57,18 @@ const decrypted = computed(() => {
 
   const decoder = new TextDecoder()
   return decoder.decode(Uint8Array.from(combined_sss.get_secret()))
-})
+}, {})
 
 const shareCount = ref(2)
 
 const maybe_append_empty = () => {
-  if (!shares_has_empty_field.value && shareCount.value > shares.value.length) {
+  if (shareCount.value < shares.value.length) {
+    while (shareCount.value < shares.value.length) {
+      const undefined_index = shares.value.findIndex((v) => v === undefined || v === null)
+      if (undefined_index === -1) break
+      shares.value.splice(undefined_index, 1)
+    }
+  } else if (!shares_has_empty_field.value && shareCount.value > shares.value.length) {
     shares.value.push(undefined)
   }
 }
@@ -87,7 +92,7 @@ const sorted_test = computed(() => {
         ? 1
         : b.element === undefined
         ? -1
-        : a.element.key_id - b.element.key_id
+        : a.element.id - b.element.id
     )
 })
 </script>
