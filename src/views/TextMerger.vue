@@ -6,7 +6,6 @@
     />
     <div v-if="decryption_errored !== undefined">{{ decryption_errored }}</div>
     <div>Shares: <el-input-number v-model="shareCount" type="number" :min="1" /></div>
-    {{ shares }}
     <TransitionGroup name="list" tag="div">
       <share-input
         v-for="{ index } in sorted_test"
