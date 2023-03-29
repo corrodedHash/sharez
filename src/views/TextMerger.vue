@@ -5,10 +5,10 @@
       :progress-ratio="[Math.min(shareCount, filtered_shares.length), shareCount]"
     />
     <div v-if="decryption_errored !== undefined">{{ decryption_errored }}</div>
-    <div>Shares: <el-input-number v-model="shareCount" type="number" :min="1" /></div>
+    <div>Shares: <el-input-number v-model="shareCount" type="number" :min="Math.max(1, filtered_shares.length)" /></div>
     <TransitionGroup name="list" tag="div">
       <share-input
-        v-for="{ index } in sorted_test"
+        v-for="{ index } in sorted_shares"
         :key="index"
         v-model="shares_raw[index]"
         @share-update="shares[index] = $event"
@@ -45,11 +45,13 @@ const decrypted = computed(() => {
     return undefined
   }
   const x_values = filtered_shares.value.map(({ id }) => id)
+  const y_values = filtered_shares.value.map(({ data }) => data)
+
   const a = new Set(x_values)
   if (a.size !== x_values.length) {
     return new Error('Contains equal share IDs')
   }
-  const y_values = filtered_shares.value.map(({ data }) => data)
+
   const result_length = y_values[0].length
   const wrong_size = y_values.findIndex((v) => v.length !== result_length)
   if (wrong_size !== -1) {
@@ -80,6 +82,7 @@ const change_share_count = () => {
 watch(shareCount, () => {
   change_share_count()
 })
+
 watch(
   shares,
   () => {
@@ -88,7 +91,7 @@ watch(
   { immediate: true, deep: true }
 )
 
-const sorted_test = computed(() => {
+const sorted_shares = computed(() => {
   return shares.value
     .map((v, i) => ({ index: i, element: v }))
     .sort((a, b) =>
