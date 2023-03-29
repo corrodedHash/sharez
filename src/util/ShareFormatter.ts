@@ -17,6 +17,7 @@ export class ShareFormatter {
     const data = [...atob(input)].map((v) => v.charCodeAt(0))
     return new ShareFormatter(undefined, Uint8Array.from(data.slice(1)))
   }
+
   toString(): string {
     if (this.share_id === undefined) {
       return btoa(String.fromCharCode(...this.share_data))

@@ -8,7 +8,12 @@
     <div>Shares: <el-input-number v-model="shareCount" type="number" :min="1" /></div>
     {{ shares }}
     <TransitionGroup name="list" tag="div">
-      <share-input v-for="{ index } in sorted_test" :key="index" v-model="shares[index]" />
+      <share-input
+        v-for="{ index } in sorted_test"
+        :key="index"
+        v-model="shares_raw[index]"
+        @share-update="shares[index] = $event"
+      />
     </TransitionGroup>
   </div>
 </template>
@@ -19,9 +24,10 @@ import { computed, ref, watch } from 'vue'
 import { SSS } from '@/util/sss'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
-import type { ShareInfo } from '@/components/ShareInfo'
+import type { ShareInfo, ShareInfoRaw } from '@/components/ShareInfo'
 
-const shares = ref([] as (ShareInfo | undefined)[])
+const shares_raw = ref<(ShareInfoRaw | undefined)[]>([])
+const shares = ref<(ShareInfo | undefined)[]>([])
 
 const shares_has_empty_field = computed(
   () => shares.value.find((v) => v === undefined) !== undefined
@@ -39,15 +45,12 @@ const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
-  console.log(filtered_shares.value)
   const x_values = filtered_shares.value.map(({ id }) => id)
   const a = new Set(x_values)
   if (a.size !== x_values.length) {
     return new Error('Contains equal share IDs')
   }
   const y_values = filtered_shares.value.map(({ data }) => data)
-  console.log(filtered_shares.value)
-  console.log(y_values)
   const result_length = y_values[0].length
   const wrong_size = y_values.findIndex((v) => v.length !== result_length)
   if (wrong_size !== -1) {
@@ -61,25 +64,27 @@ const decrypted = computed(() => {
 
 const shareCount = ref(2)
 
-const maybe_append_empty = () => {
+const change_share_count = () => {
   if (shareCount.value < shares.value.length) {
     while (shareCount.value < shares.value.length) {
       const undefined_index = shares.value.findIndex((v) => v === undefined || v === null)
       if (undefined_index === -1) break
       shares.value.splice(undefined_index, 1)
+      shares_raw.value.splice(undefined_index, 1)
     }
   } else if (!shares_has_empty_field.value && shareCount.value > shares.value.length) {
     shares.value.push(undefined)
+    shares_raw.value.push(undefined)
   }
 }
 
 watch(shareCount, () => {
-  maybe_append_empty()
+  change_share_count()
 })
 watch(
   shares,
   () => {
-    maybe_append_empty()
+    change_share_count()
   },
   { immediate: true, deep: true }
 )
@@ -88,11 +93,7 @@ const sorted_test = computed(() => {
   return shares.value
     .map((v, i) => ({ index: i, element: v }))
     .sort((a, b) =>
-      a.element === undefined
-        ? 1
-        : b.element === undefined
-        ? -1
-        : a.element.id - b.element.id
+      a.element === undefined ? 1 : b.element === undefined ? -1 : a.element.id - b.element.id
     )
 })
 </script>

@@ -9,29 +9,19 @@
 import { ref, watch, computed } from 'vue'
 import { ShareFormatter } from '../util/ShareFormatter'
 import { ElInput, ElInputNumber } from 'element-plus'
-import type { ShareInfo } from './ShareInfo'
+import type { ShareInfo, ShareInfoRaw } from './ShareInfo'
 const props = defineProps<{
-  share?: undefined | ShareInfo
+  raw?: undefined | ShareInfoRaw
 }>()
 
 const emits = defineEmits<{
-  (e: 'update:modelValue', share: undefined | ShareInfo): void
+  (e: 'shareUpdate', share: undefined | ShareInfo): void
+  (e: 'update:raw', value: ShareInfoRaw): void
 }>()
-
-watch(
-  () => props.share,
-  (v) => {
-    if (v === undefined) return
-    const f = new ShareFormatter(v.id, v.data)
-    key_id.value = v.id
-    data.value = f.toString()
-    console.log(v)
-  },
-  { immediate: true }
-)
 
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
+
 const share = computed(() => {
   try {
     return ShareFormatter.fromString(data.value)
@@ -39,21 +29,50 @@ const share = computed(() => {
     return undefined
   }
 })
+
 const formattedData = computed(() => {
-  return share.value !== undefined && share.value.share_id !== undefined
+  return share.value?.share_id !== undefined
 })
 
+watch(
+  () => props.raw,
+  (v) => {
+    if (v === undefined) return
+    key_id.value = v.key_id
+    data.value = v.data
+  },
+  { immediate: true }
+)
+
+
+
 watch(data, () => {
+  emits('update:raw', { key_id: key_id.value, data: data.value })
   const f = share.value
   if (f === undefined) {
-    emits('update:modelValue', undefined)
+    emits('shareUpdate', undefined)
     return
   }
   if (f.share_id !== undefined) {
     key_id.value = f.share_id
   }
   if (key_id.value !== undefined) {
-    emits('update:modelValue', { data: f.share_data, id: key_id.value })
+    emits('shareUpdate', { data: f.share_data, id: key_id.value })
+  }
+})
+
+watch(key_id, () => {
+  emits('update:raw', { key_id: key_id.value, data: data.value })
+  const f = share.value
+  if (f === undefined) {
+    emits('shareUpdate', undefined)
+    return
+  }
+  if (f.share_id !== undefined) {
+    key_id.value = f.share_id
+  }
+  if (key_id.value !== undefined) {
+    emits('shareUpdate', { data: f.share_data, id: key_id.value })
   }
 })
 </script>
