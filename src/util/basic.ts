@@ -30,3 +30,11 @@ export function fromHexString(input: string): Uint8Array {
   }
   return Uint8Array.from(result)
 }
+
+export function fromBase64String(input: string): Uint8Array {
+  return Uint8Array.from([...window.atob(input)].map((v) => v.charCodeAt(0)))
+}
+
+export function toBase64String(input: Uint8Array): string {
+  return window.btoa(String.fromCharCode(...input))
+}

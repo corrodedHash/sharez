@@ -9,6 +9,12 @@
       :show-tooltip="false"
     />
     <el-input v-model="sharedText" type="text" />
+    <div class="privateKeyBox">
+      <el-input v-model="privateKey" type="text" />
+      <el-button :icon="CirclePlusFilled" circle @click="createKeyPair" />
+    </div>
+    {{ signingKeyPair }}
+
     <transition-group v-if="sharedText.length > 0" name="shareList" tag="div" class="shareBox">
       <output-box v-for="(s, index) in shares" :key="index" :value="s ?? 'loading'" />
     </transition-group>
@@ -16,35 +22,76 @@
 </template>
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ElSlider, ElInput } from 'element-plus'
-import { SSS } from '../util/sss'
+import { ElSlider, ElInput, ElButton } from 'element-plus'
+import { CirclePlusFilled } from '@element-plus/icons-vue'
+import { SSS } from '@/util/sss'
 import OutputBox from '@/components/OutputBox.vue'
-import { ShareFormatter } from '../util/ShareFormatter'
+import { ShareFormatter, fromRawPrivateKey, generateKeyPair } from '@/util/ShareFormatter'
+import { fromBase64String, toBase64String } from '@/util/basic'
 
 const shareCount = ref(2)
-const sharedText = ref('一夫当关 万夫莫开')
+const sharedText = ref('A secret shared is a secret no more')
+
+async function createKeyPair() {
+  const kp = await generateKeyPair()
+  privateKey.value = toBase64String(
+    new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey))
+  )
+}
+type CryptoKeyPair = { publicKey: CryptoKey; privateKey: CryptoKey }
+const privateKey = ref('')
+const signingKeyPair = ref<CryptoKeyPair | undefined>(undefined)
+let privateKeyImportToken = Symbol('Import key')
+watch(privateKey, (k) => {
+  const my_token = Symbol('Import key')
+  privateKeyImportToken = my_token
+  try {
+    const privateKey_raw = fromBase64String(k)
+    fromRawPrivateKey(privateKey_raw)
+      .then((v) => {
+        if (privateKeyImportToken === my_token) signingKeyPair.value = v
+      })
+      .catch((e) => {
+        console.log('Incorrect private key', e)
+      })
+  } catch {
+    console.log('hi')
+    signingKeyPair.value = undefined
+  }
+})
 
 const shares = ref<string[]>([])
 let share_calc_token = Symbol()
 watch(
-  [shareCount, sharedText],
-  ([c, t]) => {
+  [shareCount, sharedText, signingKeyPair],
+  ([shareCount, sharedText, signingKeyPair]) => {
     const encoder = new TextEncoder()
-    const secret = encoder.encode(t)
-    const share_gen = SSS.from_secret(secret, c)
+    const secret = encoder.encode(sharedText)
+    const share_gen = SSS.from_secret(secret, shareCount)
     const current_token = Symbol()
     share_calc_token = current_token
-    shares.value = [...new Array(c)]
-    for (let i = 0; i < c; i++) {
-      new ShareFormatter(i + 1, share_gen.get_share(i + 1)).toString().then((s) => {
-        if (current_token === share_calc_token) shares.value[i] = s
-      })
+    shares.value = [...new Array(shareCount)]
+    for (let i = 0; i < shareCount; i++) {
+      ;(async () => {
+        const shareFormatter = new ShareFormatter(i + 1, share_gen.get_share(i + 1))
+        if (signingKeyPair !== undefined) {
+          await shareFormatter.sign(signingKeyPair)
+        }
+        const resultShare = await shareFormatter.toString()
+        if (current_token === share_calc_token) {
+          shares.value[i] = resultShare
+        }
+      })()
     }
   },
   { immediate: true }
 )
 </script>
 <style scoped>
+.privateKeyBox {
+  display: flex;
+  flex-direction: row;
+}
 .container {
   display: flex;
   flex-direction: column;

@@ -27,9 +27,13 @@ const share = ref<ShareFormatter | undefined>(undefined)
 watch(data, (d) => {
   const current_token = Symbol()
   data_parse_token = current_token
-  ShareFormatter.fromString(d).then((v) => {
-    if (current_token === data_parse_token) share.value = v
-  })
+  ShareFormatter.fromString(d)
+    .then((v) => {
+      if (current_token === data_parse_token) share.value = v
+    })
+    .catch((e) => {
+      console.warn(`Could not transform ${d}: ${e}`)
+    })
 })
 
 const formattedData = computed(() => {
@@ -46,33 +50,15 @@ watch(
   { immediate: true }
 )
 
-watch(share, (s) => {
-  emits('update:raw', { key_id: key_id.value, data: data.value })
-  const f = s
-  if (f === undefined) {
+watch([key_id, share], ([k, s]) => {
+  emits('update:raw', { key_id: k, data: data.value })
+  if (s === undefined) {
     emits('shareUpdate', undefined)
     return
   }
-  if (f.share_id !== undefined) {
-    key_id.value = f.share_id
-  }
+  key_id.value = s.share_id ?? k
   if (key_id.value !== undefined) {
-    emits('shareUpdate', { data: f.share_data, id: key_id.value })
-  }
-})
-
-watch(key_id, () => {
-  emits('update:raw', { key_id: key_id.value, data: data.value })
-  const f = share.value
-  if (f === undefined) {
-    emits('shareUpdate', undefined)
-    return
-  }
-  if (f.share_id !== undefined) {
-    key_id.value = f.share_id
-  }
-  if (key_id.value !== undefined) {
-    emits('shareUpdate', { data: f.share_data, id: key_id.value })
+    emits('shareUpdate', { data: s.share_data, id: key_id.value })
   }
 })
 </script>

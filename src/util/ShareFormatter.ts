@@ -1,9 +1,13 @@
+import { fromBase64String, toBase64String } from './basic'
+
 const SIGN_ALGO = 'ECDSA'
 const SIGN_CURVE = 'P-256'
 const SIGN_SIGNATURE_BYTE_COUNT = 64
-const SIGN_PUBKEY_BYTE_COUNT = 32
+const SIGN_PUBKEY_BYTE_COUNT = 65
 const SIGN_PREFIX = '~'
 const ID_PREFIX = '$'
+
+const SIGN_PUBKEY_SHARE_FORMAT = 'raw'
 export class ShareFormatter {
   share_data: Uint8Array
   share_id: number | undefined
@@ -21,16 +25,11 @@ export class ShareFormatter {
 
   async sign(keypair: CryptoKeyPair) {
     if (this.share_id === undefined) throw new Error('Cannot sign share without id')
-    const privateKey = await crypto.subtle.exportKey('pkcs8', keypair.privateKey)
-
-    const key = await crypto.subtle.importKey(
-      'pkcs8',
-      privateKey,
-      { name: SIGN_ALGO, namedCurve: SIGN_CURVE },
-      true,
-      ['sign']
+    const signature = await crypto.subtle.sign(
+      { name: SIGN_ALGO, hash: { name: 'SHA-256' } },
+      keypair.privateKey,
+      this.get_signable_data()
     )
-    const signature = await crypto.subtle.sign(SIGN_ALGO, key, this.get_signable_data())
     const publicKey = await crypto.subtle.exportKey('spki', keypair.publicKey)
     const pubkey = await crypto.subtle.importKey(
       'spki',
@@ -40,7 +39,7 @@ export class ShareFormatter {
       ['verify']
     )
 
-    this.signature_info = { signature, pubkey }
+    this.signature_info = { signature: new Uint8Array(signature), pubkey }
   }
 
   async verify() {
@@ -58,53 +57,57 @@ export class ShareFormatter {
   static async fromString(input: string): Promise<ShareFormatter> {
     if (input.startsWith(SIGN_PREFIX)) {
       const data_str = input.slice(1)
-      const data = [...window.atob(data_str)].map((v) => v.charCodeAt(0))
+      const data = fromBase64String(data_str)
       const share_id = data[0]
-      const pubkey_raw = Uint8Array.from(data.slice(1, 1 + SIGN_PUBKEY_BYTE_COUNT))
+      const pubkey_raw = data.slice(1, 1 + SIGN_PUBKEY_BYTE_COUNT)
+      const signature = data.slice(
+        1 + SIGN_PUBKEY_BYTE_COUNT,
+        1 + SIGN_PUBKEY_BYTE_COUNT + SIGN_SIGNATURE_BYTE_COUNT
+      )
+
+      const share_data = data.slice(1 + SIGN_PUBKEY_BYTE_COUNT + SIGN_SIGNATURE_BYTE_COUNT)
+
       const pubkey = await crypto.subtle.importKey(
-        'spki',
+        SIGN_PUBKEY_SHARE_FORMAT,
         pubkey_raw,
         { name: SIGN_ALGO, namedCurve: SIGN_CURVE },
         true,
         ['verify']
       )
-      const signature = Uint8Array.from(
-        data.slice(1, 1 + SIGN_PUBKEY_BYTE_COUNT + SIGN_SIGNATURE_BYTE_COUNT)
-      )
-      const share_data = Uint8Array.from(
-        data.slice(1 + SIGN_PUBKEY_BYTE_COUNT + SIGN_SIGNATURE_BYTE_COUNT)
-      )
       const result = new ShareFormatter(share_id, share_data)
-      result.signature_info = { pubkey, signature }
+      result.signature_info = { pubkey, signature: new Uint8Array(signature) }
       return result
     }
+
     if (input.startsWith(ID_PREFIX)) {
       const data_str = input.slice(1)
-      const data = [...window.atob(data_str)].map((v) => v.charCodeAt(0))
+      const data = fromBase64String(data_str)
       return new ShareFormatter(data[0], Uint8Array.from(data.slice(1)))
     }
 
-    const data = [...window.atob(input)].map((v) => v.charCodeAt(0))
-    return new ShareFormatter(undefined, Uint8Array.from(data.slice(1)))
+    const data = fromBase64String(input)
+    return new ShareFormatter(undefined, data.slice(1))
   }
 
   async toString(): Promise<string> {
     if (this.share_id === undefined) {
-      return window.btoa(String.fromCharCode(...this.share_data))
+      return toBase64String(this.share_data)
     }
     if (this.signature_info === undefined) {
       const output = Uint8Array.from([this.share_id, ...this.share_data])
       return ID_PREFIX + window.btoa(String.fromCharCode(...output))
     }
-    const pubkey_raw = await crypto.subtle.exportKey('spki', this.signature_info.pubkey)
-
+    const pubkey_raw = await crypto.subtle.exportKey(
+      SIGN_PUBKEY_SHARE_FORMAT,
+      this.signature_info.pubkey
+    )
     const output = Uint8Array.from([
       this.share_id,
       ...new Uint8Array(pubkey_raw),
       ...new Uint8Array(this.signature_info.signature),
       ...this.share_data
     ])
-    return SIGN_PREFIX + window.btoa(String.fromCharCode(...output))
+    return SIGN_PREFIX + toBase64String(output)
   }
 }
 
@@ -115,4 +118,30 @@ export async function generateKeyPair(): Promise<CryptoKeyPair> {
     ['sign', 'verify']
   )
   return keyPair
+}
+
+async function getPublicKey(privateKey: CryptoKey): Promise<CryptoKey> {
+  const x = await crypto.subtle.exportKey('jwk', privateKey)
+  delete x.d
+  x.key_ops = ['verify']
+  return await crypto.subtle.importKey(
+    'jwk',
+    x,
+    { name: SIGN_ALGO, namedCurve: SIGN_CURVE },
+    true,
+    ['verify']
+  )
+}
+
+export async function fromRawPrivateKey(privateKey_raw: Uint8Array): Promise<CryptoKeyPair> {
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKey_raw,
+    { name: SIGN_ALGO, namedCurve: SIGN_CURVE },
+    true,
+    ['sign']
+  )
+  const publicKey = await getPublicKey(privateKey)
+
+  return { privateKey, publicKey }
 }
