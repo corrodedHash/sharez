@@ -21,13 +21,15 @@ const emits = defineEmits<{
 
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
+let data_parse_token = Symbol()
+const share = ref<ShareFormatter | undefined>(undefined)
 
-const share = computed(() => {
-  try {
-    return ShareFormatter.fromString(data.value)
-  } catch {
-    return undefined
-  }
+watch(data, (d) => {
+  const current_token = Symbol()
+  data_parse_token = current_token
+  ShareFormatter.fromString(d).then((v) => {
+    if (current_token === data_parse_token) share.value = v
+  })
 })
 
 const formattedData = computed(() => {
@@ -44,11 +46,9 @@ watch(
   { immediate: true }
 )
 
-
-
-watch(data, () => {
+watch(share, (s) => {
   emits('update:raw', { key_id: key_id.value, data: data.value })
-  const f = share.value
+  const f = s
   if (f === undefined) {
     emits('shareUpdate', undefined)
     return

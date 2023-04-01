@@ -1,16 +1,21 @@
 const SIGN_ALGO = 'ECDSA'
 const SIGN_CURVE = 'P-256'
+const SIGN_SIGNATURE_BYTE_COUNT = 64
+const SIGN_PUBKEY_BYTE_COUNT = 32
+const SIGN_PREFIX = '~'
+const ID_PREFIX = '$'
 export class ShareFormatter {
-  share_id: number | undefined
   share_data: Uint8Array
-  public_key: CryptoKey | undefined
-  signature: ArrayBuffer | undefined
+  share_id: number | undefined
+  signature_info: { pubkey: CryptoKey; signature: ArrayBuffer } | undefined
 
   constructor(share_id: number | undefined, share_data: Uint8Array) {
     this.share_id = share_id
     this.share_data = share_data
   }
+
   private get_signable_data(): Uint8Array {
+    if (this.share_id === undefined) throw new Error('Cannot sign data without shareid')
     return Uint8Array.from([this.share_id ?? 255, ...this.share_data])
   }
 
@@ -27,7 +32,7 @@ export class ShareFormatter {
     )
     const signature = await crypto.subtle.sign(SIGN_ALGO, key, this.get_signable_data())
     const publicKey = await crypto.subtle.exportKey('spki', keypair.publicKey)
-    this.public_key = await crypto.subtle.importKey(
+    const pubkey = await crypto.subtle.importKey(
       'spki',
       publicKey,
       { name: SIGN_ALGO, namedCurve: SIGN_CURVE },
@@ -35,38 +40,71 @@ export class ShareFormatter {
       ['verify']
     )
 
-    this.signature = signature
+    this.signature_info = { signature, pubkey }
   }
 
   async verify() {
-    if (this.public_key === undefined || this.signature === undefined) {
+    if (this.signature_info === undefined) {
       throw new Error('Cannot verify share with no public key information')
     }
     return await crypto.subtle.verify(
       SIGN_ALGO,
-      this.public_key,
-      this.signature,
+      this.signature_info.pubkey,
+      this.signature_info.signature,
       this.get_signable_data()
     )
   }
 
-  static fromString(input: string): ShareFormatter {
-    if (input.startsWith('$')) {
+  static async fromString(input: string): Promise<ShareFormatter> {
+    if (input.startsWith(SIGN_PREFIX)) {
       const data_str = input.slice(1)
-      const data = [...atob(data_str)].map((v) => v.charCodeAt(0))
+      const data = [...window.atob(data_str)].map((v) => v.charCodeAt(0))
+      const share_id = data[0]
+      const pubkey_raw = Uint8Array.from(data.slice(1, 1 + SIGN_PUBKEY_BYTE_COUNT))
+      const pubkey = await crypto.subtle.importKey(
+        'spki',
+        pubkey_raw,
+        { name: SIGN_ALGO, namedCurve: SIGN_CURVE },
+        true,
+        ['verify']
+      )
+      const signature = Uint8Array.from(
+        data.slice(1, 1 + SIGN_PUBKEY_BYTE_COUNT + SIGN_SIGNATURE_BYTE_COUNT)
+      )
+      const share_data = Uint8Array.from(
+        data.slice(1 + SIGN_PUBKEY_BYTE_COUNT + SIGN_SIGNATURE_BYTE_COUNT)
+      )
+      const result = new ShareFormatter(share_id, share_data)
+      result.signature_info = { pubkey, signature }
+      return result
+    }
+    if (input.startsWith(ID_PREFIX)) {
+      const data_str = input.slice(1)
+      const data = [...window.atob(data_str)].map((v) => v.charCodeAt(0))
       return new ShareFormatter(data[0], Uint8Array.from(data.slice(1)))
     }
 
-    const data = [...atob(input)].map((v) => v.charCodeAt(0))
+    const data = [...window.atob(input)].map((v) => v.charCodeAt(0))
     return new ShareFormatter(undefined, Uint8Array.from(data.slice(1)))
   }
 
-  toString(): string {
+  async toString(): Promise<string> {
     if (this.share_id === undefined) {
-      return btoa(String.fromCharCode(...this.share_data))
+      return window.btoa(String.fromCharCode(...this.share_data))
     }
-    const output = Uint8Array.from([this.share_id, ...this.share_data])
-    return '$' + btoa(String.fromCharCode(...output))
+    if (this.signature_info === undefined) {
+      const output = Uint8Array.from([this.share_id, ...this.share_data])
+      return ID_PREFIX + window.btoa(String.fromCharCode(...output))
+    }
+    const pubkey_raw = await crypto.subtle.exportKey('spki', this.signature_info.pubkey)
+
+    const output = Uint8Array.from([
+      this.share_id,
+      ...new Uint8Array(pubkey_raw),
+      ...new Uint8Array(this.signature_info.signature),
+      ...this.share_data
+    ])
+    return SIGN_PREFIX + window.btoa(String.fromCharCode(...output))
   }
 }
 
