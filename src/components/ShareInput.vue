@@ -2,6 +2,8 @@
   <div class="shareElement">
     <el-input-number v-model="key_id" :disabled="formattedData" :min="1" size="small" />
     <el-input v-model="data" />
+    {{ signatureStatus }}
+    {{ verifyResult }}
   </div>
 </template>
 
@@ -23,6 +25,29 @@ const key_id = ref(undefined as undefined | number)
 const data = ref('')
 let data_parse_token = Symbol()
 const share = ref<ShareFormatter | undefined>(undefined)
+
+const signatureStatus = ref<string | undefined>()
+const verifyResult = ref<boolean | undefined>(undefined)
+let verifyResultToken = Symbol('Verify result')
+
+watch(share, (s) => {
+  if (s === undefined) {
+    signatureStatus.value = ''
+    return
+  }
+  if (s.signature_info === undefined) {
+    signatureStatus.value = '?'
+    return
+  }
+  const current_token = Symbol('Verify result')
+  verifyResultToken = current_token
+  verifyResult.value = undefined
+  s.verify().then((v) => {
+    if (verifyResultToken !== current_token) return
+    verifyResult.value = v
+  })
+  signatureStatus.value = 'Loading'
+})
 
 watch(data, (d) => {
   const current_token = Symbol()
