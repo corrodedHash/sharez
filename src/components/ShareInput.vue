@@ -2,16 +2,35 @@
   <div class="shareElement">
     <el-input-number v-model="key_id" :disabled="formattedData" :min="1" size="small" />
     <el-input v-model="data" />
-    {{ signatureStatus }}
-    {{ verifyResult }}
+    <el-icon
+      color="#409EFC"
+      class="no-inherit"
+      style="margin-left: 0.2em"
+      size="large"
+      v-if="signatureStatus !== undefined"
+    >
+      <SuccessFilled v-if="signatureStatus === 'Verified'" />
+      <CircleCloseFilled v-if="signatureStatus === 'Rejected'" />
+      <QuestionFilled v-if="signatureStatus === '?'" />
+      <Cpu is-loading v-if="signatureStatus === 'Loading'" />
+      <Failed v-if="signatureStatus === 'Corrupt'" />
+    </el-icon>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { ShareFormatter } from '../util/ShareFormatter'
-import { ElInput, ElInputNumber } from 'element-plus'
+import { ElInput, ElInputNumber, ElIcon } from 'element-plus'
 import type { ShareInfo, ShareInfoRaw } from './ShareInfo'
+import {
+  SuccessFilled,
+  QuestionFilled,
+  CircleCloseFilled,
+  Cpu,
+  Failed
+} from '@element-plus/icons-vue'
+
 const props = defineProps<{
   raw?: undefined | ShareInfoRaw
 }>()
@@ -25,14 +44,13 @@ const key_id = ref(undefined as undefined | number)
 const data = ref('')
 let data_parse_token = Symbol()
 const share = ref<ShareFormatter | undefined>(undefined)
-
-const signatureStatus = ref<string | undefined>()
-const verifyResult = ref<boolean | undefined>(undefined)
+type SignatureStatus = '?' | 'Loading' | 'Corrupt' | 'Verified' | 'Rejected'
+const signatureStatus = ref<SignatureStatus | undefined>()
 let verifyResultToken = Symbol('Verify result')
 
 watch(share, (s) => {
   if (s === undefined) {
-    signatureStatus.value = ''
+    signatureStatus.value = undefined
     return
   }
   if (s.signature_info === undefined) {
@@ -41,12 +59,17 @@ watch(share, (s) => {
   }
   const current_token = Symbol('Verify result')
   verifyResultToken = current_token
-  verifyResult.value = undefined
-  s.verify().then((v) => {
-    if (verifyResultToken !== current_token) return
-    verifyResult.value = v
-  })
   signatureStatus.value = 'Loading'
+
+  s.verify()
+    .then((v) => {
+      console.log('hi')
+      if (verifyResultToken !== current_token) return
+      signatureStatus.value = v ? 'Verified' : 'Rejected'
+    })
+    .catch((e) => {
+      signatureStatus.value = 'Corrupt'
+    })
 })
 
 watch(data, (d) => {
@@ -92,5 +115,6 @@ watch([key_id, share], ([k, s]) => {
 .shareElement {
   max-width: 20em;
   display: flex;
+  align-items: center;
 }
 </style>

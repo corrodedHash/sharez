@@ -8,6 +8,7 @@ const SIGN_PREFIX = '~'
 const ID_PREFIX = '$'
 
 const SIGN_PUBKEY_SHARE_FORMAT = 'raw'
+const SIGN_HASH = 'SHA-256'
 export class ShareFormatter {
   share_data: Uint8Array
   share_id: number | undefined
@@ -26,7 +27,7 @@ export class ShareFormatter {
   async sign(keypair: CryptoKeyPair) {
     if (this.share_id === undefined) throw new Error('Cannot sign share without id')
     const signature = await crypto.subtle.sign(
-      { name: SIGN_ALGO, hash: { name: 'SHA-256' } },
+      { name: SIGN_ALGO, hash: { name: SIGN_HASH } },
       keypair.privateKey,
       this.get_signable_data()
     )
@@ -47,7 +48,7 @@ export class ShareFormatter {
       throw new Error('Cannot verify share with no public key information')
     }
     return await crypto.subtle.verify(
-      SIGN_ALGO,
+      { name: SIGN_ALGO, hash: { name: SIGN_HASH } },
       this.signature_info.pubkey,
       this.signature_info.signature,
       this.get_signable_data()

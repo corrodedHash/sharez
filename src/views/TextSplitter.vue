@@ -10,10 +10,16 @@
     />
     <el-input v-model="sharedText" type="text" />
     <div class="privateKeyBox">
-      <el-input v-model="privateKey" type="text" />
+      <el-input v-model="privateKey" type="text">
+        <template #suffix>
+          <el-icon v-if="privateKey !== ''">
+            <circle-close-filled v-if="signingKeyPair === undefined" />
+            <circle-check-filled v-else />
+          </el-icon>
+        </template>
+      </el-input>
       <el-button :icon="CirclePlusFilled" circle @click="createKeyPair" />
     </div>
-    {{ signingKeyPair }}
 
     <transition-group v-if="sharedText.length > 0" name="shareList" tag="div" class="shareBox">
       <output-box v-for="(s, index) in shares" :key="index" :value="s ?? 'loading'" />
@@ -21,9 +27,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { ElSlider, ElInput, ElButton } from 'element-plus'
-import { CirclePlusFilled } from '@element-plus/icons-vue'
+import { ref, watch, computed } from 'vue'
+import { ElSlider, ElInput, ElButton, ElIcon } from 'element-plus'
+import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { SSS } from '@/util/sss'
 import OutputBox from '@/components/OutputBox.vue'
 import { ShareFormatter, fromRawPrivateKey, generateKeyPair } from '@/util/ShareFormatter'
@@ -45,19 +51,22 @@ let privateKeyImportToken = Symbol('Import key')
 watch(privateKey, (k) => {
   const my_token = Symbol('Import key')
   privateKeyImportToken = my_token
+  let privateKey_raw
   try {
-    const privateKey_raw = fromBase64String(k)
-    fromRawPrivateKey(privateKey_raw)
-      .then((v) => {
-        if (privateKeyImportToken === my_token) signingKeyPair.value = v
-      })
-      .catch((e) => {
-        console.log('Incorrect private key', e)
-      })
+    privateKey_raw = fromBase64String(k)
   } catch {
-    console.log('hi')
     signingKeyPair.value = undefined
+    return
   }
+  fromRawPrivateKey(privateKey_raw)
+    .then((v) => {
+      if (privateKeyImportToken === my_token) signingKeyPair.value = v
+    })
+    .catch((e) => {
+      if (privateKeyImportToken !== my_token) return
+      signingKeyPair.value = undefined
+      console.log('Incorrect private key', e)
+    })
 })
 
 const shares = ref<string[]>([])
