@@ -48,7 +48,7 @@ type CryptoKeyPair = { publicKey: CryptoKey; privateKey: CryptoKey }
 const privateKey = ref('')
 const signingKeyPair = ref<CryptoKeyPair | undefined>(undefined)
 let privateKeyImportToken = Symbol('Import key')
-watch(privateKey, (k) => {
+watch(privateKey, async (k) => {
   const my_token = Symbol('Import key')
   privateKeyImportToken = my_token
   let privateKey_raw
@@ -58,15 +58,14 @@ watch(privateKey, (k) => {
     signingKeyPair.value = undefined
     return
   }
-  fromRawPrivateKey(privateKey_raw)
-    .then((v) => {
-      if (privateKeyImportToken === my_token) signingKeyPair.value = v
-    })
-    .catch((e) => {
-      if (privateKeyImportToken !== my_token) return
-      signingKeyPair.value = undefined
-      console.log('Incorrect private key', e)
-    })
+  try {
+    const v = await fromRawPrivateKey(privateKey_raw)
+    if (privateKeyImportToken === my_token) signingKeyPair.value = v
+  } catch (e) {
+    if (privateKeyImportToken !== my_token) return
+    signingKeyPair.value = undefined
+    console.log('Incorrect private key', e)
+  }
 })
 
 const shares = ref<string[]>([])

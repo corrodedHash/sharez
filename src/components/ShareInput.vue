@@ -3,7 +3,7 @@
     <el-input-number v-model="key_id" :disabled="formattedData" :min="1" size="small" />
     <el-input v-model="data" />
     <el-icon
-      color="#409EFC"
+      :color="SignatureIconColorMap[signatureStatus]"
       class="no-inherit"
       style="margin-left: 0.2em"
       size="large"
@@ -40,11 +40,19 @@ const emits = defineEmits<{
   (e: 'update:raw', value: ShareInfoRaw): void
 }>()
 
+type SignatureStatus = '?' | 'Loading' | 'Corrupt' | 'Verified' | 'Rejected'
+const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
+  '?': 'lightgray',
+  Corrupt: 'red',
+  Loading: '#409EFC',
+  Rejected: 'red',
+  Verified: 'green'
+}
+
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
 let data_parse_token = Symbol()
 const share = ref<ShareFormatter | undefined>(undefined)
-type SignatureStatus = '?' | 'Loading' | 'Corrupt' | 'Verified' | 'Rejected'
 const signatureStatus = ref<SignatureStatus | undefined>()
 let verifyResultToken = Symbol('Verify result')
 
