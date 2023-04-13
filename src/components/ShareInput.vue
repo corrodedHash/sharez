@@ -30,6 +30,7 @@ import {
   Cpu,
   Failed
 } from '@element-plus/icons-vue'
+import { ObsoleteResolve, last } from '@/util/lastEval'
 
 const props = defineProps<{
   raw?: undefined | ShareInfoRaw
@@ -51,42 +52,48 @@ const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
 
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
-let data_parse_token = Symbol()
 const share = ref<ShareFormatter | undefined>()
 const signatureStatus = ref<SignatureStatus | undefined>()
-let verifyResultToken = Symbol('Verify result')
 
-watch(share, async (s) => {
+const calculateSignatureStatus = last(async function (s: ShareFormatter | undefined) {
   if (s === undefined) {
-    signatureStatus.value = undefined
-    return
+    return undefined
   }
   if (s.signature_info === undefined) {
-    signatureStatus.value = '?'
-    return
+    return '?'
   }
-  const current_token = Symbol('Verify result')
-  verifyResultToken = current_token
-  signatureStatus.value = 'Loading'
 
   try {
     const v = await s.verify()
-    if (verifyResultToken !== current_token) return
-    signatureStatus.value = v ? 'Verified' : 'Rejected'
+    return v ? 'Verified' : 'Rejected'
   } catch {
-    if (verifyResultToken !== current_token) return
-    signatureStatus.value = 'Corrupt'
+    return 'Corrupt'
   }
 })
 
-watch(data, async (d) => {
-  const current_token = Symbol()
-  data_parse_token = current_token
+watch(share, async (s) => {
+  signatureStatus.value = 'Loading'
   try {
-    const v = await ShareFormatter.fromString(d)
-    if (current_token === data_parse_token) share.value = v
+    signatureStatus.value = await calculateSignatureStatus(s)
   } catch (e) {
+    if (e instanceof ObsoleteResolve) console.info('Obsolete resolve')
+    else console.warn(e)
+  }
+})
+
+const shareFromString = last(async (d: string) => {
+  return await ShareFormatter.fromString(d).catch((e) => {
     console.warn(`Could not transform ${d}: ${e}`)
+    return undefined
+  })
+})
+
+watch(data, async (d) => {
+  try {
+    share.value = await shareFromString(d)
+  } catch (e) {
+    if (e instanceof ObsoleteResolve) console.info('Obsolete promise resolved')
+    else console.warn(e)
   }
 })
 
@@ -104,8 +111,11 @@ watch(
   { immediate: true }
 )
 
+watch([key_id, data], ([k, d]) => {
+  emits('update:raw', { key_id: k, data: d })
+})
+
 watch([key_id, share], ([k, s]) => {
-  emits('update:raw', { key_id: k, data: data.value })
   if (s === undefined) {
     emits('shareUpdate', undefined)
     return
