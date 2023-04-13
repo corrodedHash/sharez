@@ -52,11 +52,11 @@ const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
 let data_parse_token = Symbol()
-const share = ref<ShareFormatter | undefined>(undefined)
+const share = ref<ShareFormatter | undefined>()
 const signatureStatus = ref<SignatureStatus | undefined>()
 let verifyResultToken = Symbol('Verify result')
 
-watch(share, (s) => {
+watch(share, async (s) => {
   if (s === undefined) {
     signatureStatus.value = undefined
     return
@@ -69,27 +69,25 @@ watch(share, (s) => {
   verifyResultToken = current_token
   signatureStatus.value = 'Loading'
 
-  s.verify()
-    .then((v) => {
-      console.log('hi')
-      if (verifyResultToken !== current_token) return
-      signatureStatus.value = v ? 'Verified' : 'Rejected'
-    })
-    .catch((e) => {
-      signatureStatus.value = 'Corrupt'
-    })
+  try {
+    const v = await s.verify()
+    if (verifyResultToken !== current_token) return
+    signatureStatus.value = v ? 'Verified' : 'Rejected'
+  } catch {
+    if (verifyResultToken !== current_token) return
+    signatureStatus.value = 'Corrupt'
+  }
 })
 
-watch(data, (d) => {
+watch(data, async (d) => {
   const current_token = Symbol()
   data_parse_token = current_token
-  ShareFormatter.fromString(d)
-    .then((v) => {
-      if (current_token === data_parse_token) share.value = v
-    })
-    .catch((e) => {
-      console.warn(`Could not transform ${d}: ${e}`)
-    })
+  try {
+    const v = await ShareFormatter.fromString(d)
+    if (current_token === data_parse_token) share.value = v
+  } catch (e) {
+    console.warn(`Could not transform ${d}: ${e}`)
+  }
 })
 
 const formattedData = computed(() => {

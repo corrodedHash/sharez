@@ -5,7 +5,14 @@
       :progress-ratio="[Math.min(shareCount, filtered_shares.length), shareCount]"
     />
     <div v-if="decryption_errored !== undefined">{{ decryption_errored }}</div>
-    <div>Shares: <el-input-number v-model="shareCount" type="number" :min="Math.max(1, filtered_shares.length)" /></div>
+    <div>
+      Shares:
+      <el-input-number
+        v-model="shareCount"
+        type="number"
+        :min="Math.max(1, filtered_shares.length)"
+      />
+    </div>
     <TransitionGroup name="list" tag="div">
       <share-input
         v-for="{ index } in sorted_shares"
@@ -79,12 +86,8 @@ const change_share_count = () => {
   }
 }
 
-watch(shareCount, () => {
-  change_share_count()
-})
-
 watch(
-  shares,
+  [shareCount, shares],
   () => {
     change_share_count()
   },
