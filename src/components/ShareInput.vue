@@ -112,7 +112,7 @@ watch(
 )
 
 watch([key_id, data], ([k, d]) => {
-  emits('update:raw', { key_id: k, data: d })
+  emits('update:raw', { key_id: k ?? undefined, data: d })
 })
 
 watch([key_id, share], ([k, s]) => {
