@@ -5,8 +5,19 @@
       type="range"
       :step="1"
       :min="1"
-      :max="10"
+      :max="255"
       :show-tooltip="false"
+      show-input
+      size="small"
+    /><el-slider
+      v-model.number="extraShareCount"
+      type="range"
+      :step="1"
+      :min="0"
+      :max="255 - shareCount"
+      :show-tooltip="false"
+      show-input
+      size="small"
     />
     <el-input v-model="sharedText" type="text" />
     <div class="privateKeyBox">
@@ -22,20 +33,26 @@
     </div>
 
     <transition-group v-if="sharedText.length > 0" name="shareList" tag="div" class="shareBox">
-      <output-box v-for="(s, index) in shares" :key="index" :value="s ?? 'loading'" />
+      <output-box
+        v-for="(s, index) in shares.concat(extraShares)"
+        :key="index"
+        :value="s ?? 'loading'"
+      />
     </transition-group>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElSlider, ElInput, ElButton, ElIcon } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { SSS } from '@/util/sss'
 import OutputBox from '@/components/OutputBox.vue'
 import { ShareFormatter, fromRawPrivateKey, generateKeyPair } from '@/util/ShareFormatter'
 import { fromBase64String, toBase64String } from '@/util/basic'
+import { last } from '@/util/lastEval'
 
 const shareCount = ref(2)
+const extraShareCount = ref(0)
 const sharedText = ref('A secret shared is a secret no more')
 
 async function createKeyPair() {
@@ -68,29 +85,69 @@ watch(privateKey, async (k) => {
   }
 })
 
-const shares = ref<string[]>([])
-let share_calc_token = Symbol()
+const shares = ref([] as string[])
+const extraShares = ref([] as string[])
+
+const shamir_gen = computed(() => {
+  const encoder = new TextEncoder()
+  const secret = encoder.encode(sharedText.value)
+  return SSS.from_secret(secret, shareCount.value)
+})
+
+async function createShare(
+  index: number,
+  s: SSS,
+  signingKeyPair: CryptoKeyPair | undefined
+): Promise<string> {
+  const shareFormatter = new ShareFormatter(index, s.get_share(index))
+  if (signingKeyPair !== undefined) {
+    await shareFormatter.sign(signingKeyPair)
+  }
+  return await shareFormatter.toString()
+}
+
+async function createShares(
+  startIndex: number,
+  shareCount: number,
+  s: SSS,
+  signingKeyPair: CryptoKeyPair | undefined
+) {
+  const result = [...new Array(shareCount)]
+  const promiseResults = result.map((_, index) =>
+    createShare(index + startIndex, s, signingKeyPair)
+  )
+  const resolvedResult = await Promise.all(promiseResults)
+  return resolvedResult
+}
+
+const generateShares = last(
+  async (s: SSS, shareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
+    return createShares(1, shareCount, s, signingKeyPair)
+  }
+)
+const generateExtraShares = last(
+  async (
+    s: SSS,
+    shareCount: number,
+    extraShareCount: number,
+    signingKeyPair: CryptoKeyPair | undefined
+  ) => {
+    return createShares(shareCount + 1, extraShareCount, s, signingKeyPair)
+  }
+)
+
 watch(
-  [shareCount, sharedText, signingKeyPair],
-  ([shareCount, sharedText, signingKeyPair]) => {
-    const encoder = new TextEncoder()
-    const secret = encoder.encode(sharedText)
-    const share_gen = SSS.from_secret(secret, shareCount)
-    const current_token = Symbol()
-    share_calc_token = current_token
-    shares.value = [...new Array(shareCount)]
-    for (let i = 0; i < shareCount; i++) {
-      ;(async () => {
-        const shareFormatter = new ShareFormatter(i + 1, share_gen.get_share(i + 1))
-        if (signingKeyPair !== undefined) {
-          await shareFormatter.sign(signingKeyPair)
-        }
-        const resultShare = await shareFormatter.toString()
-        if (current_token === share_calc_token) {
-          shares.value[i] = resultShare
-        }
-      })()
-    }
+  [shamir_gen, shareCount, signingKeyPair],
+  async ([s, shareCount, signingKeyPair]) => {
+    shares.value = await generateShares(s, shareCount, signingKeyPair)
+  },
+  { immediate: true }
+)
+
+watch(
+  [shamir_gen, shareCount, extraShareCount, signingKeyPair],
+  async ([s, shareCount, extraShareCount, signingKeyPair]) => {
+    extraShares.value = await generateExtraShares(s, shareCount, extraShareCount, signingKeyPair)
   },
   { immediate: true }
 )
