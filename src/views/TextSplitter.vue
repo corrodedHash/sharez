@@ -74,9 +74,15 @@ async function createKeyPair() {
   )
 }
 
-const loadKeyPair = last(async (rawPrivateKey: Uint8Array): Promise<CryptoKeyPair | undefined> => {
+const loadKeyPair = last(async (privateKey: string): Promise<CryptoKeyPair | undefined> => {
+  let privateKey_raw
   try {
-    const v = await fromRawPrivateKey(rawPrivateKey)
+    privateKey_raw = fromBase64String(privateKey)
+  } catch {
+    return undefined
+  }
+  try {
+    const v = await fromRawPrivateKey(privateKey_raw)
     return v
   } catch (e) {
     return undefined
@@ -124,15 +130,8 @@ const generateExtraShares = last(
     return createShares(shareCount + 1, extraShareCount, s, signingKeyPair)
   }
 )
-watch(privateKey, async (k) => {
-  let privateKey_raw
-  try {
-    privateKey_raw = fromBase64String(k)
-  } catch {
-    signingKeyPair.value = undefined
-    return
-  }
-  const result = await loadKeyPair(privateKey_raw)
+watch(privateKey, async (privateKey) => {
+  const result = await loadKeyPair(privateKey)
   signingKeyPair.value = result
   if (result === undefined) {
     console.log('Incorrect private key')
