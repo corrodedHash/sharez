@@ -1,5 +1,3 @@
-import { getRandomInt } from './basic'
-
 import type { HandlerType } from './polynomial'
 import { Polynomial } from './polynomial'
 import { GF256Element } from './GF256'
