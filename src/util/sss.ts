@@ -55,10 +55,12 @@ export class SSS {
 
   static from_secret(secret: Uint8Array, threshold: number): SSS {
     const polynomials = Array.from(secret)
-      .map((v) => [
-        new GF256Element(v),
-        ...[...Array(threshold - 1)].map(() => new GF256Element(getRandomInt(0, 256)))
-      ])
+      .map((v) => {
+        const coefficients = new Uint8Array(threshold - 1)
+        crypto.getRandomValues(coefficients)
+        const galois_coefficients = Array.from(coefficients).map((v) => new GF256Element(v))
+        return [new GF256Element(v), ...galois_coefficients]
+      })
       .map((v) => new GF256Polynomial(v))
     return new SSS(polynomials)
   }
