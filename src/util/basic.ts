@@ -31,10 +31,23 @@ export function fromHexString(input: string): Uint8Array {
   return Uint8Array.from(result)
 }
 
-export function fromBase64String(input: string): Uint8Array {
+export interface Base64Options {
+  extra_chars: string
+  padding: boolean
+}
+
+export function fromBase64String(input: string, options?: Partial<Base64Options>): Uint8Array {
   return Uint8Array.from([...window.atob(input)].map((v) => v.charCodeAt(0)))
 }
 
-export function toBase64String(input: Uint8Array): string {
-  return window.btoa(String.fromCharCode(...input))
+export function toBase64String(input: Uint8Array, options?: Partial<Base64Options>): string {
+  let encoded = window.btoa(String.fromCharCode(...input))
+  if (options !== undefined && options.padding !== undefined && !options.padding) {
+    encoded = encoded.replaceAll('=', '')
+  }
+  if (options !== undefined && options.extra_chars !== undefined) {
+    encoded = encoded.replaceAll('=', '')
+  }
+
+  return encoded
 }

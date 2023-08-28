@@ -2,10 +2,8 @@ import { fromBase64String, toBase64String } from './basic'
 
 const SIGN_ALGO = 'ECDSA'
 const SIGN_CURVE = 'P-256'
-const SIGN_SIGNATURE_BYTE_COUNT = 64
-const SIGN_PUBKEY_BYTE_COUNT = 65
-const SIGN_PREFIX = '~'
-const ID_PREFIX = '$'
+
+const SHRZ_PREFIX = 'shrz'
 
 const SIGN_PUBKEY_SHARE_FORMAT = 'raw'
 const SIGN_HASH = 'SHA-256'
@@ -93,21 +91,28 @@ export class ShareFormatter {
     if (this.share_id === undefined) {
       return toBase64String(this.share_data)
     }
-    if (this.signature_info === undefined) {
-      const output = Uint8Array.from([this.share_id, ...this.share_data])
-      return ID_PREFIX + window.btoa(String.fromCharCode(...output))
+    const str_share_id = this.share_id.toString()
+    const str_share_data = toBase64String(this.share_data)
+    const str_signature = this.signature_info
+      ? toBase64String(new Uint8Array(this.signature_info.signature))
+      : undefined
+
+    const str_pubkey = this.signature_info
+      ? toBase64String(
+          new Uint8Array(
+            await crypto.subtle.exportKey(SIGN_PUBKEY_SHARE_FORMAT, this.signature_info.pubkey)
+          )
+        )
+      : undefined
+
+    let result = `${SHRZ_PREFIX}:${str_share_id}:${str_share_data}`
+    if (str_signature !== undefined) {
+      result += ':' + str_signature
+      if (str_pubkey !== undefined) {
+        result += ':' + str_pubkey
+      }
     }
-    const pubkey_raw = await crypto.subtle.exportKey(
-      SIGN_PUBKEY_SHARE_FORMAT,
-      this.signature_info.pubkey
-    )
-    const output = Uint8Array.from([
-      this.share_id,
-      ...new Uint8Array(pubkey_raw),
-      ...new Uint8Array(this.signature_info.signature),
-      ...this.share_data
-    ])
-    return SIGN_PREFIX + toBase64String(output)
+    return result
   }
 }
 
