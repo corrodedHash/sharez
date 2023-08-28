@@ -7,6 +7,9 @@ const SHRZ_PREFIX = 'shrz'
 
 const SIGN_PUBKEY_SHARE_FORMAT = 'raw'
 const SIGN_HASH = 'SHA-256'
+
+const BASE64OPTIONS = { padding: false, extra_chars: '-_' }
+
 export class ShareFormatter {
   share_data: Uint8Array
   share_id: number | undefined
@@ -55,18 +58,20 @@ export class ShareFormatter {
   }
 
   static async fromString(input: string): Promise<ShareFormatter> {
-    const sharez_regex =
-      /^shrz:(?<share_id>[0-9]+):(?<data>[a-zA-Z0-9-_]+)(?::(?<signature>[a-zA-Z0-9-_]+)(?::(?<pubkey>[a-zA-Z0-9-_]+))?)?$/
+    const base64chars = 'a-zA-Z0-9-_'
+    const sharez_regex = new RegExp(
+      `^${SHRZ_PREFIX}:(?<share_id>[0-9]+):(?<data>[${base64chars}]+)(?::(?<signature>[${base64chars}]+)(?::(?<pubkey>[${base64chars}]+))?)?$`
+    )
 
     const share_match = sharez_regex.exec(input)
     if (share_match === null) throw new Error('Input not a share')
     if (share_match.groups === undefined) throw new Error('Could not match share parts')
     const { share_id, data, signature, pubkey } = share_match.groups
 
-    const imported_data = fromBase64String(data)
+    const imported_data = fromBase64String(data, BASE64OPTIONS)
     const imported_share_id = parseInt(share_id)
-    const imported_signature = signature ? fromBase64String(signature) : undefined
-    const imported_pubkey = pubkey ? fromBase64String(pubkey) : undefined
+    const imported_signature = signature ? fromBase64String(signature, BASE64OPTIONS) : undefined
+    const imported_pubkey = pubkey ? fromBase64String(pubkey, BASE64OPTIONS) : undefined
 
     const built_pubkey = imported_pubkey
       ? await crypto.subtle.importKey(
@@ -89,19 +94,20 @@ export class ShareFormatter {
 
   async toString(): Promise<string> {
     if (this.share_id === undefined) {
-      return toBase64String(this.share_data)
+      return toBase64String(this.share_data, BASE64OPTIONS)
     }
     const str_share_id = this.share_id.toString()
-    const str_share_data = toBase64String(this.share_data)
+    const str_share_data = toBase64String(this.share_data, BASE64OPTIONS)
     const str_signature = this.signature_info
-      ? toBase64String(new Uint8Array(this.signature_info.signature))
+      ? toBase64String(new Uint8Array(this.signature_info.signature), BASE64OPTIONS)
       : undefined
 
     const str_pubkey = this.signature_info
       ? toBase64String(
           new Uint8Array(
             await crypto.subtle.exportKey(SIGN_PUBKEY_SHARE_FORMAT, this.signature_info.pubkey)
-          )
+          ),
+          BASE64OPTIONS
         )
       : undefined
 

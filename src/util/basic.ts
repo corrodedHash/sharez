@@ -36,7 +36,23 @@ export interface Base64Options {
   padding: boolean
 }
 
+export function createReplacementDict(from: string, to: string): { [k: string]: string } {
+  const replacement_chars = to + from.substring(to.length)
+  const replacement_dict = Object.fromEntries(
+    [...from].map((v, index) => [v, replacement_chars[index]])
+  )
+  return replacement_dict
+}
+
+export function characterReplace(from: string, to: string, input: string): string {
+  const replacement_dict = createReplacementDict(from, to)
+  return input.replaceAll(new RegExp(`[${from}]`, 'g'), (x) => replacement_dict[x])
+}
+
 export function fromBase64String(input: string, options?: Partial<Base64Options>): Uint8Array {
+  if (options !== undefined && options.extra_chars !== undefined) {
+    input = characterReplace(options.extra_chars, '+/=', input)
+  }
   return Uint8Array.from([...window.atob(input)].map((v) => v.charCodeAt(0)))
 }
 
@@ -46,7 +62,7 @@ export function toBase64String(input: Uint8Array, options?: Partial<Base64Option
     encoded = encoded.replaceAll('=', '')
   }
   if (options !== undefined && options.extra_chars !== undefined) {
-    encoded = encoded.replaceAll('=', '')
+    encoded = characterReplace('+/=', options.extra_chars, encoded)
   }
 
   return encoded

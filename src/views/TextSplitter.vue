@@ -20,6 +20,7 @@
       size="small"
     />
     <el-input v-model="sharedText" type="text" />
+    <el-switch v-model="showTextbox" />
     <div class="privateKeyBox">
       <el-input v-model="privateKey" type="text">
         <template #suffix>
@@ -31,8 +32,15 @@
       </el-input>
       <el-button :icon="CirclePlusFilled" circle @click="createKeyPair" />
     </div>
-
-    <transition-group v-if="sharedText.length > 0" name="el-zoom-in-top" tag="div" class="shareBox">
+    <div v-if="showTextbox" class="noLinebreaks outputBox">
+      {{ shares.concat(extraShares).join('\n') }}
+    </div>
+    <transition-group
+      v-if="sharedText.length > 0 && !showTextbox"
+      name="el-zoom-in-top"
+      tag="div"
+      class="shareBox"
+    >
       <output-box
         v-for="(s, index) in shares.concat(extraShares)"
         :key="index"
@@ -43,13 +51,15 @@
 </template>
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ElSlider, ElInput, ElButton, ElIcon } from 'element-plus'
+import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { SSS } from '@/util/sss'
 import OutputBox from '@/components/OutputBox.vue'
 import { ShareFormatter, fromRawPrivateKey, generateKeyPair } from '@/util/ShareFormatter'
 import { fromBase64String, toBase64String } from '@/util/basic'
 import { last } from '@/util/lastEval'
+
+const showTextbox = ref(false)
 
 const shareCount = ref(2)
 const extraShareCount = ref(0)
@@ -170,5 +180,15 @@ watch(
   margin-top: 2em;
   max-width: 100%;
   overflow-x: hidden;
+}
+.noLinebreaks {
+  white-space: pre;
+  overflow: scroll;
+}
+.outputBox {
+  border: 2px solid black;
+  padding: 1em;
+  margin-top: 1em;
+  font-family: mono;
 }
 </style>
