@@ -13,10 +13,20 @@ const BASE64OPTIONS = { padding: false, extra_chars: '-_' }
 export class ShareFormatter {
   share_data: Uint8Array
   share_id: number | undefined
+  share_requirement: number | undefined
   signature_info: { pubkey: CryptoKey; signature: ArrayBuffer } | undefined
 
-  constructor(share_id: number | undefined, share_data: Uint8Array) {
-    this.share_id = share_id
+  constructor(
+    share_data: Uint8Array,
+    info:
+      | Partial<{
+          share_id: number
+          share_requirement: number
+        }>
+      | undefined
+  ) {
+    this.share_id = info?.share_id
+    this.share_requirement = info?.share_requirement
     this.share_data = share_data
   }
 
@@ -87,7 +97,7 @@ export class ShareFormatter {
       built_pubkey && imported_signature
         ? { pubkey: built_pubkey, signature: imported_signature }
         : undefined
-    const result = new ShareFormatter(imported_share_id, imported_data)
+    const result = new ShareFormatter(imported_data, { share_id: imported_share_id })
     result.signature_info = signature_info
     return result
   }
@@ -97,6 +107,10 @@ export class ShareFormatter {
       return toBase64String(this.share_data, BASE64OPTIONS)
     }
     const str_share_id = this.share_id.toString()
+    let str_share_req = ''
+    if (this.share_requirement !== undefined) {
+      str_share_req = 'u' + this.share_requirement.toString()
+    }
     const str_share_data = toBase64String(this.share_data, BASE64OPTIONS)
     const str_signature = this.signature_info
       ? toBase64String(new Uint8Array(this.signature_info.signature), BASE64OPTIONS)
@@ -111,7 +125,7 @@ export class ShareFormatter {
         )
       : undefined
 
-    let result = `${SHRZ_PREFIX}:${str_share_id}:${str_share_data}`
+    let result = `${SHRZ_PREFIX}:${str_share_id}${str_share_req}:${str_share_data}`
     if (str_signature !== undefined) {
       result += ':' + str_signature
       if (str_pubkey !== undefined) {

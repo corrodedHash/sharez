@@ -104,7 +104,7 @@ async function createShare(
   s: SSS,
   signingKeyPair: CryptoKeyPair | undefined
 ): Promise<string> {
-  const shareFormatter = new ShareFormatter(index, s.get_share(index))
+  const shareFormatter = new ShareFormatter( s.get_share(index), {share_id: index, share_requirement: shareCount.value})
   if (signingKeyPair !== undefined) {
     await shareFormatter.sign(signingKeyPair)
   }
