@@ -59,7 +59,7 @@ const calculateSignatureStatus = last(async function (s: ShareFormatter | undefi
   if (s === undefined) {
     return undefined
   }
-  if (s.signature_info === undefined) {
+  if (s.signature === undefined) {
     return '?'
   }
 
