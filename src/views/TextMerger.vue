@@ -41,16 +41,22 @@ const decryption_errored = computed(() =>
   decrypted.value instanceof Error ? decrypted.value.message : undefined
 )
 
+const relevant_share_data = computed(() =>
+  shares.value.map((v): [number, Uint8Array] | undefined =>
+    v?.share_id === undefined ? undefined : [v.share_id, v.share_data]
+  )
+)
+
 const filtered_shares = computed(() =>
-  shares.value.filter((v): v is Exclude<typeof v, undefined> => v !== undefined)
+  relevant_share_data.value.filter((v): v is Exclude<typeof v, undefined> => v !== undefined)
 )
 
 const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
-  const x_values = filtered_shares.value.map(({ share_id }) => share_id)
-  const y_values = filtered_shares.value.map(({ share_data }) => share_data)
+  const x_values = filtered_shares.value.map(([share_id, _]) => share_id)
+  const y_values = filtered_shares.value.map(([_, share_data]) => share_data)
 
   const a = new Set(x_values)
   if (a.size !== x_values.length) {
