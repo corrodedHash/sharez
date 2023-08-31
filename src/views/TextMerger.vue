@@ -17,7 +17,6 @@
       <share-input
         v-for="{ index } in sorted_shares"
         :key="index"
-        v-model="shares_raw[index]"
         @share-update="shares[index] = $event"
       />
     </TransitionGroup>
@@ -30,10 +29,9 @@ import { computed, ref, watch } from 'vue'
 import { SSS } from '@/util/sss'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
-import type { ShareInfo, ShareInfoRaw } from '@/components/ShareInfo'
+import type { ShareFormatter } from '@/util/ShareFormatter'
 
-const shares_raw = ref<(ShareInfoRaw | undefined)[]>([])
-const shares = ref<(ShareInfo | undefined)[]>([])
+const shares = ref<(ShareFormatter | undefined)[]>([])
 
 const shares_has_empty_field = computed(
   () => shares.value.find((v) => v === undefined) !== undefined
@@ -51,8 +49,8 @@ const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
-  const x_values = filtered_shares.value.map(({ id }) => id)
-  const y_values = filtered_shares.value.map(({ data }) => data)
+  const x_values = filtered_shares.value.map(({ share_id }) => share_id)
+  const y_values = filtered_shares.value.map(({ share_data }) => share_data)
 
   const a = new Set(x_values)
   if (a.size !== x_values.length) {
@@ -78,11 +76,9 @@ const change_share_count = () => {
       const undefined_index = shares.value.findIndex((v) => v === undefined || v === null)
       if (undefined_index === -1) break
       shares.value.splice(undefined_index, 1)
-      shares_raw.value.splice(undefined_index, 1)
     }
   } else if (!shares_has_empty_field.value && shareCount.value > shares.value.length) {
     shares.value.push(undefined)
-    shares_raw.value.push(undefined)
   }
 }
 
@@ -98,7 +94,11 @@ const sorted_shares = computed(() => {
   return shares.value
     .map((v, i) => ({ index: i, element: v }))
     .sort((a, b) =>
-      a.element === undefined ? 1 : b.element === undefined ? -1 : a.element.id - b.element.id
+      a.element?.share_id === undefined
+        ? 1
+        : b.element?.share_id === undefined
+        ? -1
+        : a.element.share_id - b.element.share_id
     )
 })
 </script>

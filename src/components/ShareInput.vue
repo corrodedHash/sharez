@@ -22,7 +22,6 @@
 import { ref, watch, computed } from 'vue'
 import { ShareFormatter } from '../util/ShareFormatter'
 import { ElInput, ElInputNumber, ElIcon } from 'element-plus'
-import type { ShareInfo, ShareInfoRaw } from './ShareInfo'
 import {
   SuccessFilled,
   QuestionFilled,
@@ -32,13 +31,8 @@ import {
 } from '@element-plus/icons-vue'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 
-const props = defineProps<{
-  raw?: undefined | ShareInfoRaw
-}>()
-
 const emits = defineEmits<{
-  (e: 'shareUpdate', share: undefined | ShareInfo): void
-  (e: 'update:raw', value: ShareInfoRaw): void
+  (e: 'shareUpdate', share: ShareFormatter | undefined): void
 }>()
 
 type SignatureStatus = '?' | 'Loading' | 'Corrupt' | 'Verified' | 'Rejected'
@@ -81,6 +75,11 @@ watch(share, async (s) => {
   }
 })
 
+watch(share, async (s) => {
+  emits('shareUpdate', s)
+  if (s === undefined) return
+  data.value = await s.toString()
+})
 const shareFromString = last(async (d: string) => {
   return await ShareFormatter.fromString(d).catch((e) => {
     console.warn(`Could not transform ${d}: ${e}`)
@@ -94,36 +93,18 @@ watch(data, async (d) => {
   } catch (e) {
     if (e instanceof ObsoleteResolve) console.info('Obsolete promise resolved')
     else console.warn(e)
+    return
   }
+  key_id.value = share.value?.share_id
+})
+
+watch(key_id, (k) => {
+  if (share.value === undefined) return
+  share.value.share_id = k
 })
 
 const formattedData = computed(() => {
   return share.value?.share_id !== undefined
-})
-
-watch(
-  () => props.raw,
-  (v) => {
-    if (v === undefined) return
-    key_id.value = v.key_id
-    data.value = v.data
-  },
-  { immediate: true }
-)
-
-watch([key_id, data], ([k, d]) => {
-  emits('update:raw', { key_id: k ?? undefined, data: d })
-})
-
-watch([key_id, share], ([k, s]) => {
-  if (s === undefined) {
-    emits('shareUpdate', undefined)
-    return
-  }
-  key_id.value = s.share_id ?? k
-  if (key_id.value !== undefined) {
-    emits('shareUpdate', { data: s.share_data, id: key_id.value })
-  }
 })
 </script>
 
