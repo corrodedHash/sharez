@@ -5,6 +5,7 @@
       :progress-ratio="[Math.min(shareCount, filtered_shares.length), shareCount]"
     />
     <div v-if="decryption_errored !== undefined">{{ decryption_errored }}</div>
+    <div v-if="pubkey !== undefined">{{ pubkey }}</div>
     <div>
       Shares:
       <el-input-number
@@ -17,7 +18,7 @@
       <share-input
         v-for="{ index } in sorted_shares"
         :key="index"
-        @share-update="shares[index] = $event"
+        @share-update="updateShare(index, $event)"
       />
     </TransitionGroup>
   </div>
@@ -32,6 +33,12 @@ import MergeProgress from '@/components/MergeProgress.vue'
 import type { ShareFormatter } from '@/util/ShareFormatter'
 
 const shares = ref<(ShareFormatter | undefined)[]>([])
+const shareCount = ref(2)
+const pubkey = ref(undefined as CryptoKey | undefined)
+
+function updateShare(index: number, share: ShareFormatter | undefined) {
+  shares.value.splice(index, 1, share)
+}
 
 const shares_has_empty_field = computed(
   () => shares.value.find((v) => v === undefined) !== undefined
@@ -55,7 +62,7 @@ const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
-  const x_values = filtered_shares.value.map(([share_id, ]) => share_id)
+  const x_values = filtered_shares.value.map(([share_id]) => share_id)
   const y_values = filtered_shares.value.map(([, share_data]) => share_data)
 
   const a = new Set(x_values)
@@ -74,7 +81,41 @@ const decrypted = computed(() => {
   return decoder.decode(Uint8Array.from(combined_sss.get_secret()))
 }, {})
 
-const shareCount = ref(2)
+function sortedCounts<T>(countedArray: T[]): [T, number][] {
+  const result = countedArray.reduce(
+    (acc, v) => {
+      const index = acc.findIndex(([x]) => x === v)
+      if (index === -1) acc.push([v, 1])
+      else acc[index][1] += 1
+      return acc
+    },
+    [] as [T, number][]
+  )
+  return result.sort((a, b) => a[1] - b[1])
+}
+
+watch(
+  shares,
+  (s) => {
+    console.log('hi')
+    const pubkeys = sortedCounts(s.map((v) => v?.pubkey)).filter(
+      (v): v is [CryptoKey, number] => v[0] !== undefined
+    )
+    const req_counts = sortedCounts(s.map((v) => v?.share_requirement)).filter(
+      (v): v is [number, number] => v[0] !== undefined
+    )
+    if (req_counts.length === 1) {
+      shareCount.value = req_counts[0][0]
+    }
+    console.log(pubkeys)
+    if (pubkeys.length === 1) {
+      pubkey.value = pubkeys[0][0]
+    } else {
+      pubkey.value = undefined
+    }
+  },
+  { deep: true }
+)
 
 const change_share_count = () => {
   if (shareCount.value < shares.value.length) {

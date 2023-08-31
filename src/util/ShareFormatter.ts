@@ -83,7 +83,6 @@ export class ShareFormatter {
       `^${SHRZ_PREFIX}:(?<share_id>\\d+)(?:u(?<share_req>\\d+))?` +
         `:(?<data>[${base64chars}]+)(?::(?<signature>[${base64chars}]+)(?::(?<pubkey>[${base64chars}]+))?)?$`
     )
-    console.log(sharez_regex)
 
     const share_match = sharez_regex.exec(input)
     if (share_match === null) throw new Error('Input not a share')
