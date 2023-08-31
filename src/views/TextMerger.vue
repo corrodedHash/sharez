@@ -55,8 +55,8 @@ const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
-  const x_values = filtered_shares.value.map(([share_id, _]) => share_id)
-  const y_values = filtered_shares.value.map(([_, share_data]) => share_data)
+  const x_values = filtered_shares.value.map(([share_id, ]) => share_id)
+  const y_values = filtered_shares.value.map(([, share_data]) => share_data)
 
   const a = new Set(x_values)
   if (a.size !== x_values.length) {
