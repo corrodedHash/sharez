@@ -5,7 +5,10 @@
       :progress-ratio="[Math.min(shareCount, filtered_shares.length), shareCount]"
     />
     <div v-if="decryption_errored !== undefined">{{ decryption_errored }}</div>
-    <div v-if="pubkey !== undefined">{{ pubkey }}</div>
+    <div v-if="pubkey !== undefined">
+      Public key:
+      <key-display :ckey="pubkey" />
+    </div>
     <div>
       Shares:
       <el-input-number
@@ -31,6 +34,7 @@ import { SSS } from '@/util/sss'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
 import type { ShareFormatter } from '@/util/ShareFormatter'
+import KeyDisplay from '@/components/KeyDisplay.vue'
 
 const shares = ref<(ShareFormatter | undefined)[]>([])
 const shareCount = ref(2)
@@ -81,6 +85,10 @@ const decrypted = computed(() => {
   return decoder.decode(Uint8Array.from(combined_sss.get_secret()))
 }, {})
 
+/**
+ Deduplicate array and count occurences of equal elements  
+ Returns values sorted highest to lowest
+ */
 function sortedCounts<T>(countedArray: T[]): [T, number][] {
   const result = countedArray.reduce(
     (acc, v) => {
@@ -91,13 +99,12 @@ function sortedCounts<T>(countedArray: T[]): [T, number][] {
     },
     [] as [T, number][]
   )
-  return result.sort((a, b) => a[1] - b[1])
+  return result.sort((a, b) => b[1] - a[1])
 }
 
 watch(
   shares,
   (s) => {
-    console.log('hi')
     const pubkeys = sortedCounts(s.map((v) => v?.pubkey)).filter(
       (v): v is [CryptoKey, number] => v[0] !== undefined
     )
@@ -107,7 +114,6 @@ watch(
     if (req_counts.length === 1) {
       shareCount.value = req_counts[0][0]
     }
-    console.log(pubkeys)
     if (pubkeys.length === 1) {
       pubkey.value = pubkeys[0][0]
     } else {
