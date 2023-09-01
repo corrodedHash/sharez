@@ -11,42 +11,71 @@
     </div>
     <div>
       Shares:
-      <el-input-number
-        v-model="shareCount"
-        type="number"
-        :min="Math.max(1, filtered_shares.length)"
-      />
+      <el-input-number v-model="shareCount" type="number" :min="1" :max="256" />
+    </div>
+    <div>
+      <el-input v-model="candidate_text" type="textarea" placeholder="shrz:..." />
+      <el-button circle :icon="Plus" @click="addCandidate" />
     </div>
     <TransitionGroup name="list" tag="div">
-      <share-input
-        v-for="{ index } in sorted_shares"
-        :key="index"
-        @share-update="updateShare(index, $event)"
-      />
+      <div
+        v-for="{ index, element } in sorted_shares"
+        :key="element?.share_id ? 's-' + element.share_id : index"
+        class="shareInputBox"
+      >
+        <el-button circle :icon="Minus" size="small" @click="dropCandidate(index)" />
+        <share-input :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
+      </div>
     </TransitionGroup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ElInputNumber } from 'element-plus'
+import { ElInputNumber, ElButton, ElInput } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { SSS } from '@/util/sss'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
 import type { ShareFormatter } from '@/util/ShareFormatter'
 import KeyDisplay from '@/components/KeyDisplay.vue'
+import { Plus, Minus } from '@element-plus/icons-vue'
 
 const shares = ref<(ShareFormatter | undefined)[]>([])
+const sharesRaw = ref<string[]>([])
+
 const shareCount = ref(2)
 const pubkey = ref(undefined as CryptoKey | undefined)
+
+const candidate_text = ref('')
+const candidates = computed(() =>
+  candidate_text.value
+    .split('\n')
+    .map((v) => v.replace(/\s/g, ''))
+    .filter((v) => v !== '')
+)
+
+function addCandidate() {
+  if (candidates.value.length === 0) {
+    sharesRaw.value.push('')
+    shares.value.push(undefined)
+  } else {
+    for (const x of candidates.value) {
+      sharesRaw.value.push(x)
+      shares.value.push(undefined)
+    }
+  }
+  candidate_text.value = ''
+}
+
+function dropCandidate(index: number) {
+  console.log('removing', index, sharesRaw.value)
+  sharesRaw.value.splice(index, 1)
+  shares.value.splice(index, 1)
+}
 
 function updateShare(index: number, share: ShareFormatter | undefined) {
   shares.value.splice(index, 1, share)
 }
-
-const shares_has_empty_field = computed(
-  () => shares.value.find((v) => v === undefined) !== undefined
-)
 
 const decryption_errored = computed(() =>
   decrypted.value instanceof Error ? decrypted.value.message : undefined
@@ -123,26 +152,6 @@ watch(
   { deep: true }
 )
 
-const change_share_count = () => {
-  if (shareCount.value < shares.value.length) {
-    while (shareCount.value < shares.value.length) {
-      const undefined_index = shares.value.findIndex((v) => v === undefined || v === null)
-      if (undefined_index === -1) break
-      shares.value.splice(undefined_index, 1)
-    }
-  } else if (!shares_has_empty_field.value && shareCount.value > shares.value.length) {
-    shares.value.push(undefined)
-  }
-}
-
-watch(
-  [shareCount, shares],
-  () => {
-    change_share_count()
-  },
-  { immediate: true, deep: true }
-)
-
 const sorted_shares = computed(() => {
   return shares.value
     .map((v, i) => ({ index: i, element: v }))
@@ -159,6 +168,10 @@ const sorted_shares = computed(() => {
 <style scoped>
 .list-move {
   transition: all 0.5s ease;
+}
+.shareInputBox {
+  display: flex;
+  flex-direction: row;
 }
 .mergeBox {
   display: flex;

@@ -1,6 +1,6 @@
 <template>
   <div class="shareElement">
-    <el-input-number v-model="key_id" :disabled="formattedData" :min="1" size="small" />
+    <el-input-number v-model="key_id" :min="1" size="small" />
     <el-input v-model="data" />
     <el-icon
       :color="SignatureIconColorMap[signatureStatus]"
@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { ShareFormatter } from '../util/ShareFormatter'
 import { ElInput, ElInputNumber, ElIcon } from 'element-plus'
 import {
@@ -30,6 +30,8 @@ import {
   Failed
 } from '@element-plus/icons-vue'
 import { ObsoleteResolve, last } from '@/util/lastEval'
+
+const props = defineProps<{ raw?: string }>()
 
 const emits = defineEmits<{
   (e: 'shareUpdate', share: ShareFormatter | undefined): void
@@ -48,6 +50,8 @@ const key_id = ref(undefined as undefined | number)
 const data = ref('')
 const share = ref<ShareFormatter | undefined>()
 const signatureStatus = ref<SignatureStatus | undefined>()
+
+data.value = props.raw || ''
 
 const calculateSignatureStatus = last(async function (s: ShareFormatter | undefined) {
   if (s === undefined) {
@@ -87,24 +91,25 @@ const shareFromString = last(async (d: string) => {
   })
 })
 
-watch(data, async (d) => {
-  try {
-    share.value = await shareFromString(d)
-  } catch (e) {
-    if (e instanceof ObsoleteResolve) console.info('Obsolete promise resolved')
-    else console.warn(e)
-    return
-  }
-  key_id.value = share.value?.share_id
-})
+watch(
+  data,
+  async (d) => {
+    console.log('hello')
+    try {
+      share.value = await shareFromString(d)
+    } catch (e) {
+      if (e instanceof ObsoleteResolve) console.info('Obsolete promise resolved')
+      else console.warn(e)
+      return
+    }
+    key_id.value = share.value?.share_id
+  },
+  { immediate: true }
+)
 
 watch(key_id, (k) => {
   if (share.value === undefined) return
   share.value.share_id = k
-})
-
-const formattedData = computed(() => {
-  return share.value?.share_id !== undefined
 })
 </script>
 

@@ -57,7 +57,7 @@ import { SSS } from '@/util/sss'
 import OutputBox from '@/components/OutputBox.vue'
 import { ShareFormatter, fromRawPrivateKey, generateKeyPair } from '@/util/ShareFormatter'
 import { fromBase64String, toBase64String } from '@/util/basic'
-import { last } from '@/util/lastEval'
+import { ObsoleteResolve, last } from '@/util/lastEval'
 
 const showTextbox = ref(false)
 
@@ -104,7 +104,10 @@ async function createShare(
   s: SSS,
   signingKeyPair: CryptoKeyPair | undefined
 ): Promise<string> {
-  const shareFormatter = new ShareFormatter( s.get_share(index), {share_id: index, share_requirement: shareCount.value})
+  const shareFormatter = new ShareFormatter(s.get_share(index), {
+    share_id: index,
+    share_requirement: shareCount.value
+  })
   if (signingKeyPair !== undefined) {
     await shareFormatter.sign(signingKeyPair)
   }
@@ -151,7 +154,15 @@ watch(privateKey, async (privateKey) => {
 watch(
   [shamir_gen, shareCount, signingKeyPair],
   async ([s, shareCount, signingKeyPair]) => {
-    shares.value = await generateShares(s, shareCount, signingKeyPair)
+    try {
+      shares.value = await generateShares(s, shareCount, signingKeyPair)
+    } catch (e) {
+      if (e instanceof ObsoleteResolve) {
+        console.warn('Obsolete resolve')
+      } else {
+        throw e
+      }
+    }
   },
   { immediate: true }
 )
