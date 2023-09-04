@@ -18,11 +18,7 @@
       <el-button circle :icon="Plus" @click="addCandidate" />
     </div>
     <TransitionGroup name="list" tag="div">
-      <div
-        v-for="{ index, element } in sorted_shares"
-        :key="element?.share_id ? 's-' + element.share_id : index"
-        class="shareInputBox"
-      >
+      <div v-for="{ index } in sorted_shares" :key="inputID[index]" class="shareInputBox">
         <el-button circle :icon="Minus" size="small" @click="dropCandidate(index)" />
         <share-input :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
       </div>
@@ -40,6 +36,8 @@ import type { ShareFormatter } from '@/util/ShareFormatter'
 import KeyDisplay from '@/components/KeyDisplay.vue'
 import { Plus, Minus } from '@element-plus/icons-vue'
 
+const inputID = [] as number[]
+let lastInputID = 0
 const shares = ref<(ShareFormatter | undefined)[]>([])
 const sharesRaw = ref<string[]>([])
 
@@ -56,10 +54,15 @@ const candidates = computed(() =>
 
 function addCandidate() {
   if (candidates.value.length === 0) {
+    lastInputID += 1
+    inputID.push(lastInputID)
     sharesRaw.value.push('')
     shares.value.push(undefined)
+    inputID
   } else {
     for (const x of candidates.value) {
+      lastInputID += 1
+      inputID.push(lastInputID)
       sharesRaw.value.push(x)
       shares.value.push(undefined)
     }
@@ -69,6 +72,8 @@ function addCandidate() {
 
 function dropCandidate(index: number) {
   console.log('removing', index, sharesRaw.value)
+
+  inputID.splice(index, 1)
   sharesRaw.value.splice(index, 1)
   shares.value.splice(index, 1)
 }
