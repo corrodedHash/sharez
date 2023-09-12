@@ -29,16 +29,15 @@
 <script setup lang="ts">
 import { ElInputNumber, ElButton, ElInput } from 'element-plus'
 import { computed, ref, watch } from 'vue'
-import { SSS } from '@/util/sss'
+import { SSS, Share } from 'sharez'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
-import type { ShareFormatter } from '@/util/ShareFormatter'
 import KeyDisplay from '@/components/KeyDisplay.vue'
 import { Plus, Minus } from '@element-plus/icons-vue'
 
 const inputID = [] as number[]
 let lastInputID = 0
-const shares = ref<(ShareFormatter | undefined)[]>([])
+const shares = ref<(Share | undefined)[]>([])
 const sharesRaw = ref<string[]>([])
 
 const shareCount = ref(2)
@@ -78,7 +77,7 @@ function dropCandidate(index: number) {
   shares.value.splice(index, 1)
 }
 
-function updateShare(index: number, share: ShareFormatter | undefined) {
+function updateShare(index: number, share: Share | undefined) {
   shares.value.splice(index, 1, share)
 }
 
@@ -88,7 +87,7 @@ const decryption_errored = computed(() =>
 
 const relevant_share_data = computed(() =>
   shares.value.map((v): [number, Uint8Array] | undefined =>
-    v?.share_id === undefined ? undefined : [v.share_id, v.share_data]
+    v?.xValue === undefined ? undefined : [v.xValue, v.yValues]
   )
 )
 
@@ -100,6 +99,9 @@ const decrypted = computed(() => {
   if (filtered_shares.value.length !== shareCount.value) {
     return undefined
   }
+  const joinedShares = filtered_shares.value.map(
+    ([share_id, share_data]) => new Share(share_data, { xValue: share_id })
+  )
   const x_values = filtered_shares.value.map(([share_id]) => share_id)
   const y_values = filtered_shares.value.map(([, share_data]) => share_data)
 
@@ -113,10 +115,10 @@ const decrypted = computed(() => {
   if (wrong_size !== -1) {
     return new Error(`Share ID ${x_values[wrong_size]} has wrong length`)
   }
-  const combined_sss = SSS.from_shares(y_values, x_values)
+  const combined_sss = SSS.from_shares(joinedShares)
 
   const decoder = new TextDecoder()
-  return decoder.decode(Uint8Array.from(combined_sss.get_secret()))
+  return decoder.decode(Uint8Array.from(combined_sss.secret))
 }, {})
 
 /**
@@ -142,7 +144,7 @@ watch(
     const pubkeys = sortedCounts(s.map((v) => v?.pubkey)).filter(
       (v): v is [CryptoKey, number] => v[0] !== undefined
     )
-    const req_counts = sortedCounts(s.map((v) => v?.share_requirement)).filter(
+    const req_counts = sortedCounts(s.map((v) => v?.requirement)).filter(
       (v): v is [number, number] => v[0] !== undefined
     )
     if (req_counts.length === 1) {
@@ -161,11 +163,11 @@ const sorted_shares = computed(() => {
   return shares.value
     .map((v, i) => ({ index: i, element: v }))
     .sort((a, b) =>
-      a.element?.share_id === undefined
+      a.element?.xValue === undefined
         ? 1
-        : b.element?.share_id === undefined
+        : b.element?.xValue === undefined
         ? -1
-        : a.element.share_id - b.element.share_id
+        : a.element.xValue - b.element.xValue
     )
 })
 </script>

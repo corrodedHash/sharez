@@ -53,9 +53,8 @@
 import { computed, ref, watch } from 'vue'
 import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
-import { SSS } from '@/util/sss'
 import OutputBox from '@/components/OutputBox.vue'
-import { ShareFormatter, fromRawPrivateKey, generateKeyPair } from '@/util/ShareFormatter'
+import { SSS, ShareEncoder, generateKeyPair, fromRawPrivateKey } from 'sharez'
 import { fromBase64String, toBase64String } from '@/util/basic'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 
@@ -104,14 +103,12 @@ async function createShare(
   s: SSS,
   signingKeyPair: CryptoKeyPair | undefined
 ): Promise<string> {
-  const shareFormatter = new ShareFormatter(s.get_share(index), {
-    share_id: index,
-    share_requirement: shareCount.value
-  })
+  const share = s.share(index)
+
   if (signingKeyPair !== undefined) {
-    await shareFormatter.sign(signingKeyPair)
+    await share.sign(signingKeyPair)
   }
-  return await shareFormatter.toString()
+  return await new ShareEncoder().encode(share)
 }
 
 async function createShares(

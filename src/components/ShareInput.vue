@@ -20,7 +20,6 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ShareFormatter } from '../util/ShareFormatter'
 import { ElInput, ElInputNumber, ElIcon } from 'element-plus'
 import {
   SuccessFilled,
@@ -30,11 +29,12 @@ import {
   Failed
 } from '@element-plus/icons-vue'
 import { ObsoleteResolve, last } from '@/util/lastEval'
+import { Share, ShareDecoder, ShareEncoder } from 'sharez'
 
 const props = defineProps<{ raw?: string }>()
 
 const emits = defineEmits<{
-  (e: 'shareUpdate', share: ShareFormatter | undefined): void
+  (e: 'shareUpdate', share: Share | undefined): void
 }>()
 
 type SignatureStatus = '?' | 'Loading' | 'Corrupt' | 'Verified' | 'Rejected'
@@ -48,12 +48,12 @@ const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
 
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
-const share = ref<ShareFormatter | undefined>()
+const share = ref<Share | undefined>()
 const signatureStatus = ref<SignatureStatus | undefined>()
 
 data.value = props.raw || ''
 
-const calculateSignatureStatus = last(async function (s: ShareFormatter | undefined) {
+const calculateSignatureStatus = last(async function (s: Share | undefined) {
   if (s === undefined) {
     return undefined
   }
@@ -82,10 +82,10 @@ watch(share, async (s) => {
 watch(share, async (s) => {
   emits('shareUpdate', s)
   if (s === undefined) return
-  data.value = await s.toString()
+  data.value = await new ShareEncoder().encode(s)
 })
 const shareFromString = last(async (d: string) => {
-  return await ShareFormatter.fromString(d).catch((e) => {
+  return await new ShareDecoder().decode(d).catch((e) => {
     console.warn(`Could not transform ${d}: ${e}`)
     return undefined
   })
@@ -94,7 +94,6 @@ const shareFromString = last(async (d: string) => {
 watch(
   data,
   async (d) => {
-    console.log('hello')
     try {
       share.value = await shareFromString(d)
     } catch (e) {
@@ -102,14 +101,14 @@ watch(
       else console.warn(e)
       return
     }
-    key_id.value = share.value?.share_id
+    key_id.value = share.value?.xValue
   },
   { immediate: true }
 )
 
 watch(key_id, (k) => {
   if (share.value === undefined) return
-  share.value.share_id = k
+  share.value.xValue = k
 })
 </script>
 
