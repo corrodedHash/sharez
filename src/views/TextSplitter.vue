@@ -50,13 +50,15 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import OutputBox from '@/components/OutputBox.vue'
 import { SSS, ShareEncoder, generateKeyPair, fromRawPrivateKey } from 'sharez'
 import { fromBase64String, toBase64String } from '@/util/basic'
 import { ObsoleteResolve, last } from '@/util/lastEval'
+
+import '@/util/shareGen'
 
 const showTextbox = ref(false)
 
@@ -67,11 +69,20 @@ const sharedText = ref('A secret shared is a secret no more')
 const shares = ref([] as string[])
 const extraShares = ref([] as string[])
 
-const shamir_gen = computed(() => {
+const shamir_gen = ref(SSS.from_secret(Uint8Array.from([]), 1))
+
+const createGen = last(async (text: string, count: number) => {
   const encoder = new TextEncoder()
-  const secret = encoder.encode(sharedText.value)
-  return SSS.from_secret(secret, shareCount.value)
+  const secret = encoder.encode(text)
+  return SSS.from_secret(secret, count)
 })
+watch(
+  () => [sharedText.value, shareCount.value] as const,
+  async ([t, c]) => {
+    shamir_gen.value = await createGen(t, c)
+  },
+  { immediate: true }
+)
 type CryptoKeyPair = { publicKey: CryptoKey; privateKey: CryptoKey }
 const privateKey = ref('')
 const signingKeyPair = ref<CryptoKeyPair | undefined>(undefined)
@@ -124,7 +135,6 @@ async function createShares(
   const resolvedResult = await Promise.all(promiseResults)
   return resolvedResult
 }
-
 const generateShares = last(
   async (s: SSS, shareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
     return createShares(1, shareCount, s, signingKeyPair)
