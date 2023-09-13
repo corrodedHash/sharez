@@ -1,6 +1,6 @@
 import { SSS, Share, ShareDecoder } from 'sharez'
 import SSSWorker from './shareGenWorker?worker'
-import { type GeneratorCommand, type ShareCommand } from './shareGenWorker'
+import { type GeneratorCommand, type RecoverCommand, type ShareCommand } from './shareGenWorker'
 
 export async function createGen(text: string, count: number): Promise<SSS> {
   const encoder = new TextEncoder()
@@ -30,6 +30,18 @@ export async function createShareWorker(sss: SSS, xValue: number): Promise<Share
       } catch (ex) {
         console.warn('Share creator sent weird data', e, ex)
       }
+    }
+    worker.postMessage(cmd)
+  })
+}
+
+export async function getSecret(data: [Uint8Array, number][]): Promise<SSS> {
+  return new Promise((resolve) => {
+    const worker = new SSSWorker()
+    const cmd: RecoverCommand = { cmd: 'recover', info: data }
+    worker.onmessage = async (e) => {
+      const sss = SSS.from_json(e.data)
+      resolve(sss)
     }
     worker.postMessage(cmd)
   })
