@@ -32,25 +32,32 @@
       </el-input>
       <el-button :icon="CirclePlusFilled" circle @click="createKeyPair" />
     </div>
-    <div v-if="showTextbox" class="noLinebreaks outputBox">
-      {{ shares.concat(extraShares).join('\n') }}
+    <div v-if="!shamir_loading && shares_loading">Calculating shares...</div>
+    <div v-if="!shamir_loading && !shares_loading && extra_shares_loading">
+      Calculating extra shares...
     </div>
-    <transition-group
-      v-if="sharedText.length > 0 && !showTextbox"
-      name="el-zoom-in-top"
-      tag="div"
-      class="shareBox"
-    >
-      <output-box
-        v-for="(s, index) in shares.concat(extraShares)"
-        :key="index"
-        :value="s ?? 'loading'"
-      />
-    </transition-group>
+    <div v-if="shamir_loading">Calculating polynomials...</div>
+    <div v-if="!shamir_loading && !shares_loading">
+      <div v-if="showTextbox" class="noLinebreaks outputBox">
+        {{ shares.concat(extraShares).join('\n') }}
+      </div>
+      <transition-group
+        v-if="sharedText.length > 0 && !showTextbox"
+        name="el-zoom-in-top"
+        tag="div"
+        class="shareBox"
+      >
+        <output-box
+          v-for="(s, index) in shares.concat(extraShares)"
+          :key="index"
+          :value="s ?? 'loading'"
+        />
+      </transition-group>
+    </div>
   </div>
 </template>
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import OutputBox from '@/components/OutputBox.vue'
@@ -68,9 +75,13 @@ const extraShareCount = ref(0)
 const sharedText = ref('A secret shared is a secret no more')
 
 const shares = ref([] as string[])
+const shares_loading = ref(false)
+
 const extraShares = ref([] as string[])
+const extra_shares_loading = ref(false)
 
 const shamir_gen = ref<SSS>(SSS.from_secret(Uint8Array.from([0]), 1))
+const shamir_loading = ref(false)
 
 const lastCreateGen = last(async (text: string, count: number) => {
   return await createGen(text, count)
@@ -79,8 +90,10 @@ const lastCreateGen = last(async (text: string, count: number) => {
 watch(
   [sharedText, shareCount],
   async ([t, c]) => {
+    shamir_loading.value = true
     try {
       shamir_gen.value = await lastCreateGen(t, c)
+      shamir_loading.value = false
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
         console.warn('Obsolete resolve')
@@ -162,7 +175,9 @@ watch(
   [shamir_gen, signingKeyPair],
   async ([s, signingKeyPair]) => {
     try {
+      shares_loading.value = true
       shares.value = await generateShares(s, signingKeyPair)
+      shares_loading.value = false
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
         console.warn('Obsolete resolve')
@@ -178,7 +193,9 @@ watch(
   [shamir_gen, extraShareCount, signingKeyPair],
   async ([s, extraShareCount, signingKeyPair]) => {
     try {
+      extra_shares_loading.value = true
       extraShares.value = await generateExtraShares(s, extraShareCount, signingKeyPair)
+      extra_shares_loading.value = false
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
         console.warn('Obsolete resolve')
