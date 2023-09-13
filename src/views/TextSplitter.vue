@@ -37,9 +37,14 @@
       Calculating extra shares...
     </div>
     <div v-if="shamir_loading">Calculating polynomials...</div>
-    <div v-if="!shamir_loading && !shares_loading">
+    <template v-if="!shamir_loading">
       <div v-if="showTextbox" class="noLinebreaks outputBox">
-        {{ shares.concat(extraShares).join('\n') }}
+        {{
+          shares
+            .concat(extraShares)
+            .map(([, text]) => text)
+            .join('\n')
+        }}
       </div>
       <transition-group
         v-if="sharedText.length > 0 && !showTextbox"
@@ -50,14 +55,14 @@
         <output-box
           v-for="(s, index) in shares.concat(extraShares)"
           :key="index"
-          :value="s ?? 'loading'"
+          :value="s[1] ?? 'loading'"
         />
       </transition-group>
-    </div>
+    </template>
   </div>
 </template>
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import OutputBox from '@/components/OutputBox.vue'
@@ -74,10 +79,10 @@ const shareCount = ref(2)
 const extraShareCount = ref(0)
 const sharedText = ref('A secret shared is a secret no more')
 
-const shares = ref([] as string[])
+const shares = ref([] as [number, string][])
 const shares_loading = ref(false)
 
-const extraShares = ref([] as string[])
+const extraShares = ref([] as [number, string][])
 const extra_shares_loading = ref(false)
 
 const shamir_gen = ref<SSS>(SSS.from_secret(Uint8Array.from([0]), 1))
@@ -146,23 +151,50 @@ async function createShares(
   startIndex: number,
   shareCount: number,
   s: SSS,
-  signingKeyPair: CryptoKeyPair | undefined
+  signingKeyPair: CryptoKeyPair | undefined,
+  abortSignal: AbortSignal,
+  callback: (share: string, index: number) => void
 ) {
-  const result = [...new Array(shareCount)]
-  const promiseResults = result.map((_, index) =>
-    createShare(index + startIndex, s, signingKeyPair)
+  const promises = [...new Array(shareCount)].map((bla, index) =>
+    createShare(index + startIndex, s, signingKeyPair).then((share) => {
+      if (abortSignal.aborted) return
+      callback(share, index + startIndex)
+    })
   )
-  const resolvedResult = await Promise.all(promiseResults)
-  return resolvedResult
+  await Promise.all(promises)
 }
-const generateShares = last(async (s: SSS, signingKeyPair: CryptoKeyPair | undefined) => {
-  return createShares(1, s.requiredShares, s, signingKeyPair)
-})
-const generateExtraShares = last(
-  async (s: SSS, extraShareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
-    return createShares(s.requiredShares + 1, extraShareCount, s, signingKeyPair)
+
+const generateShares = (function () {
+  const bla = [new AbortController()]
+  return async (s: SSS, signingKeyPair: CryptoKeyPair | undefined) => {
+    bla[0].abort()
+    bla[0] = new AbortController()
+    await createShares(1, s.requiredShares, s, signingKeyPair, bla[0].signal, (share, index) => {
+      shares.value.push([index, share])
+    })
+    if (bla[0].signal.aborted) throw new ObsoleteResolve('')
   }
-)
+})()
+
+const generateExtraShares = (function () {
+  const bla = [new AbortController()]
+  return async (s: SSS, extraShareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
+    bla[0].abort()
+    bla[0] = new AbortController()
+    await createShares(
+      s.requiredShares + 1,
+      extraShareCount,
+      s,
+      signingKeyPair,
+      bla[0].signal,
+      (share, index) => {
+        extraShares.value.push([index, share])
+      }
+    )
+    if (bla[0].signal.aborted) throw new ObsoleteResolve('')
+  }
+})()
+
 watch(privateKey, async (privateKey) => {
   const result = await loadKeyPair(privateKey)
   signingKeyPair.value = result
@@ -176,7 +208,9 @@ watch(
   async ([s, signingKeyPair]) => {
     try {
       shares_loading.value = true
-      shares.value = await generateShares(s, signingKeyPair)
+      shares.value = []
+      await generateShares(s, signingKeyPair)
+      shares.value = shares.value.sort(([a], [b]) => a - b)
       shares_loading.value = false
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
@@ -194,7 +228,9 @@ watch(
   async ([s, extraShareCount, signingKeyPair]) => {
     try {
       extra_shares_loading.value = true
-      extraShares.value = await generateExtraShares(s, extraShareCount, signingKeyPair)
+      extraShares.value = []
+      await generateExtraShares(s, extraShareCount, signingKeyPair)
+      extraShares.value = extraShares.value.sort(([a], [b]) => a - b)
       extra_shares_loading.value = false
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
