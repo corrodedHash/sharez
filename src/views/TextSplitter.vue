@@ -59,6 +59,7 @@ import { fromBase64String, toBase64String } from '@/util/basic'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 
 import '@/util/shareGen'
+import { createGen } from '@/util/shareGen'
 
 const showTextbox = ref(false)
 
@@ -69,17 +70,23 @@ const sharedText = ref('A secret shared is a secret no more')
 const shares = ref([] as string[])
 const extraShares = ref([] as string[])
 
-const shamir_gen = ref(SSS.from_secret(Uint8Array.from([]), 1))
+const shamir_gen = ref<SSS>(SSS.from_secret(Uint8Array.from([0]), 1))
 
-const createGen = last(async (text: string, count: number) => {
-  const encoder = new TextEncoder()
-  const secret = encoder.encode(text)
-  return SSS.from_secret(secret, count)
+const lastCreateGen = last(async (text: string, count: number) => {
+  return await createGen(text, count)
 })
+
 watch(
   () => [sharedText.value, shareCount.value] as const,
   async ([t, c]) => {
-    shamir_gen.value = await createGen(t, c)
+    try {
+      shamir_gen.value = await lastCreateGen(t, c)
+    } catch (e) {
+      if (e instanceof ObsoleteResolve) {
+        console.warn('Obsolete resolve')
+        return
+      }
+    }
   },
   { immediate: true }
 )
@@ -177,7 +184,15 @@ watch(
 watch(
   [shamir_gen, shareCount, extraShareCount, signingKeyPair],
   async ([s, shareCount, extraShareCount, signingKeyPair]) => {
-    extraShares.value = await generateExtraShares(s, shareCount, extraShareCount, signingKeyPair)
+    try {
+      extraShares.value = await generateExtraShares(s, shareCount, extraShareCount, signingKeyPair)
+    } catch (e) {
+      if (e instanceof ObsoleteResolve) {
+        console.warn('Obsolete resolve')
+      } else {
+        throw e
+      }
+    }
   },
   { immediate: true }
 )
