@@ -59,7 +59,7 @@ import { fromBase64String, toBase64String } from '@/util/basic'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 
 import '@/util/shareGen'
-import { createGen } from '@/util/shareGen'
+import { createGen, createShareWorker } from '@/util/shareGen'
 
 const showTextbox = ref(false)
 
@@ -77,7 +77,7 @@ const lastCreateGen = last(async (text: string, count: number) => {
 })
 
 watch(
-  () => [sharedText.value, shareCount.value] as const,
+  [sharedText, shareCount],
   async ([t, c]) => {
     try {
       shamir_gen.value = await lastCreateGen(t, c)
@@ -121,7 +121,7 @@ async function createShare(
   s: SSS,
   signingKeyPair: CryptoKeyPair | undefined
 ): Promise<string> {
-  const share = s.share(index)
+  const share = await createShareWorker(s, index)
 
   if (signingKeyPair !== undefined) {
     await share.sign(signingKeyPair)
@@ -142,19 +142,12 @@ async function createShares(
   const resolvedResult = await Promise.all(promiseResults)
   return resolvedResult
 }
-const generateShares = last(
-  async (s: SSS, shareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
-    return createShares(1, shareCount, s, signingKeyPair)
-  }
-)
+const generateShares = last(async (s: SSS, signingKeyPair: CryptoKeyPair | undefined) => {
+  return createShares(1, s.requiredShares, s, signingKeyPair)
+})
 const generateExtraShares = last(
-  async (
-    s: SSS,
-    shareCount: number,
-    extraShareCount: number,
-    signingKeyPair: CryptoKeyPair | undefined
-  ) => {
-    return createShares(shareCount + 1, extraShareCount, s, signingKeyPair)
+  async (s: SSS, extraShareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
+    return createShares(s.requiredShares + 1, extraShareCount, s, signingKeyPair)
   }
 )
 watch(privateKey, async (privateKey) => {
@@ -166,10 +159,10 @@ watch(privateKey, async (privateKey) => {
 })
 
 watch(
-  [shamir_gen, shareCount, signingKeyPair],
-  async ([s, shareCount, signingKeyPair]) => {
+  [shamir_gen, signingKeyPair],
+  async ([s, signingKeyPair]) => {
     try {
-      shares.value = await generateShares(s, shareCount, signingKeyPair)
+      shares.value = await generateShares(s, signingKeyPair)
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
         console.warn('Obsolete resolve')
@@ -182,10 +175,10 @@ watch(
 )
 
 watch(
-  [shamir_gen, shareCount, extraShareCount, signingKeyPair],
-  async ([s, shareCount, extraShareCount, signingKeyPair]) => {
+  [shamir_gen, extraShareCount, signingKeyPair],
+  async ([s, extraShareCount, signingKeyPair]) => {
     try {
-      extraShares.value = await generateExtraShares(s, shareCount, extraShareCount, signingKeyPair)
+      extraShares.value = await generateExtraShares(s, extraShareCount, signingKeyPair)
     } catch (e) {
       if (e instanceof ObsoleteResolve) {
         console.warn('Obsolete resolve')

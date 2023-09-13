@@ -1,4 +1,4 @@
-import { SSS } from 'sharez'
+import { SSS, ShareEncoder } from 'sharez'
 
 export interface GeneratorCommand {
   cmd: 'generator'
@@ -6,9 +6,15 @@ export interface GeneratorCommand {
   count: number
 }
 
-export type WorkerCommand = GeneratorCommand
+export interface ShareCommand {
+  cmd: 'share'
+  sss: string
+  xValue: number
+}
 
-onmessage = (e) => {
+export type WorkerCommand = GeneratorCommand | ShareCommand
+
+onmessage = async(e) => {
   const d: WorkerCommand = e.data
   switch (d.cmd) {
     case 'generator': {
@@ -16,6 +22,10 @@ onmessage = (e) => {
       postMessage(JSON.stringify(sss))
 
       break
+    }
+    case 'share': {
+      const sss = SSS.from_json(d.sss)
+      postMessage(await new ShareEncoder().encode(sss.share(d.xValue)))
     }
   }
 }
