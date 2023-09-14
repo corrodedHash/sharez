@@ -14,10 +14,16 @@
       Shares:
       <el-input-number v-model="shareCount" type="number" :min="1" :max="256" />
     </div>
-    <div>
-      <el-input v-model="candidate_text" type="textarea" placeholder="shrz:..." />
-      <el-button circle :icon="Plus" @click="addCandidate" />
-    </div>
+    <el-input
+      v-model="candidate_text"
+      style="white-space: nowrap"
+      :autosize="{ minRows: 2, maxRows: 10 }"
+      :autofocus="true"
+      type="textarea"
+      placeholder="shrz:..."
+      resize="none"
+    />
+    <el-button circle :icon="Plus" @click="addCandidate" />
     <TransitionGroup name="list" tag="div">
       <div v-for="{ index } in sorted_shares" :key="inputID[index]" class="shareInputBox">
         <el-button circle :icon="Minus" size="small" @click="dropCandidate(index)" />
@@ -60,7 +66,6 @@ function addCandidate() {
     inputID.push(lastInputID)
     sharesRaw.value.push('')
     shares.value.push(undefined)
-    inputID
   } else {
     for (const x of candidates.value) {
       lastInputID += 1
@@ -73,7 +78,6 @@ function addCandidate() {
 }
 
 function dropCandidate(index: number) {
-
   inputID.splice(index, 1)
   sharesRaw.value.splice(index, 1)
   shares.value.splice(index, 1)
