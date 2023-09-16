@@ -9,7 +9,7 @@ export interface GeneratorCommand {
 export interface ShareCommand {
   cmd: 'share'
   sss: string
-  xValue: number
+  xValues: number[]
 }
 
 export interface RecoverCommand {
@@ -30,7 +30,10 @@ onmessage = async (e) => {
     }
     case 'share': {
       const sss = SSS.from_json(d.sss)
-      postMessage(await new ShareEncoder().encode(sss.share(d.xValue)))
+      d.xValues.forEach(async (xValue) =>
+        postMessage(await new ShareEncoder().encode(sss.share(xValue)))
+      )
+
       break
     }
     case 'recover': {

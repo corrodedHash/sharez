@@ -71,7 +71,7 @@ import { fromBase64String, toBase64String } from '@/util/basic'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 
 import '@/util/shareGen'
-import { createGen, createShareWorker } from '@/util/shareGen'
+import { createGen, shares as sharesWorker } from '@/util/shareGen'
 
 const showTextbox = ref(false)
 
@@ -134,34 +134,21 @@ const loadKeyPair = last(async (privateKey: string): Promise<CryptoKeyPair | und
   }
 })
 
-async function createShare(
-  index: number,
-  s: SSS,
-  signingKeyPair: CryptoKeyPair | undefined
-): Promise<string> {
-  const share = await createShareWorker(s, index)
-
-  if (signingKeyPair !== undefined) {
-    await share.sign(signingKeyPair)
-  }
-  return await new ShareEncoder().encode(share)
-}
-
 async function createShares(
   startIndex: number,
   shareCount: number,
-  s: SSS,
+  shareGen: SSS,
   signingKeyPair: CryptoKeyPair | undefined,
   abortSignal: AbortSignal,
   callback: (share: string, index: number) => void
 ) {
-  const promises = [...new Array(shareCount)].map((bla, index) =>
-    createShare(index + startIndex, s, signingKeyPair).then((share) => {
-      if (abortSignal.aborted) return
-      callback(share, index + startIndex)
-    })
-  )
-  await Promise.all(promises)
+  const xValues = [...new Array(shareCount)].map((bla, index) => index + startIndex)
+  for await (const sh of sharesWorker(shareGen, xValues, { signal: abortSignal })) {
+    if (signingKeyPair !== undefined) {
+      await sh.sign(signingKeyPair)
+    }
+    callback(await new ShareEncoder().encode(sh), sh.xValue as number)
+  }
 }
 
 const generateShares = (function () {
@@ -169,10 +156,12 @@ const generateShares = (function () {
   return async (s: SSS, signingKeyPair: CryptoKeyPair | undefined) => {
     bla[0].abort()
     bla[0] = new AbortController()
+    const myController = bla[0]
     await createShares(1, s.requiredShares, s, signingKeyPair, bla[0].signal, (share, index) => {
+      if (myController.signal.aborted) return
       shares.value.push([index, share])
     })
-    if (bla[0].signal.aborted) throw new ObsoleteResolve('')
+    if (myController.signal.aborted) throw new ObsoleteResolve('')
   }
 })()
 
@@ -181,6 +170,7 @@ const generateExtraShares = (function () {
   return async (s: SSS, extraShareCount: number, signingKeyPair: CryptoKeyPair | undefined) => {
     bla[0].abort()
     bla[0] = new AbortController()
+    const myController = bla[0]
     await createShares(
       s.requiredShares + 1,
       extraShareCount,
@@ -188,10 +178,11 @@ const generateExtraShares = (function () {
       signingKeyPair,
       bla[0].signal,
       (share, index) => {
+        if (myController.signal.aborted) return
         extraShares.value.push([index, share])
       }
     )
-    if (bla[0].signal.aborted) throw new ObsoleteResolve('')
+    if (myController.signal.aborted) throw new ObsoleteResolve('')
   }
 })()
 

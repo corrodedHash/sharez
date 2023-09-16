@@ -19,20 +19,53 @@ export async function createGen(text: string, count: number): Promise<SSS> {
   })
 }
 
-export async function createShareWorker(sss: SSS, xValue: number): Promise<Share> {
-  return await new Promise((resolve) => {
-    const worker = new SSSWorker()
-    const cmd: ShareCommand = { cmd: 'share', sss: JSON.stringify(sss), xValue }
-    worker.onmessage = async (e) => {
-      try {
-        const share = new ShareDecoder().decode(e.data)
-        resolve(await share)
-      } catch (ex) {
-        console.warn('Share creator sent weird data', e, ex)
+export async function* shares(
+  sss: SSS,
+  xValues: number[],
+  { signal }: { signal?: AbortSignal } = {}
+): AsyncGenerator<Share> {
+  const worker = new SSSWorker()
+  const terminationToken = Symbol('Termination')
+  if (signal) {
+    signal.onabort = () => worker.terminate()
+  }
+  const cmd: ShareCommand = { cmd: 'share', sss: JSON.stringify(sss), xValues }
+  let receivedCount = 0
+  worker.postMessage(cmd)
+
+  while (receivedCount < xValues.length) {
+    const rcvPromise = new Promise((resolve: (arg0: Share) => void, reject) => {
+      const terminationCallback = () => reject(terminationToken)
+      worker.onmessage = async (e) => {
+        try {
+          const share = await new ShareDecoder().decode(e.data)
+          resolve(share)
+          signal?.removeEventListener('abort', terminationCallback)
+        } catch (ex) {
+          console.warn('Share creator sent weird data', e, ex)
+          throw ex
+        }
+      }
+      signal?.addEventListener('abort', terminationCallback)
+      worker.onerror = (error) => {
+        reject(error)
+      }
+    })
+    try {
+      console.time('Receiving worker')
+      const nextResult = await rcvPromise
+      console.timeLog('Receiving worker')
+      yield nextResult
+      console.timeEnd('Receiving worker')
+    } catch (ex) {
+      if (ex === terminationToken) {
+        return
+      } else {
+        throw ex
       }
     }
-    worker.postMessage(cmd)
-  })
+    receivedCount += 1
+  }
 }
 
 export async function getSecret(data: [Uint8Array, number][]): Promise<SSS> {
