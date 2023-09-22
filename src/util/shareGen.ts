@@ -26,9 +26,8 @@ export async function* shares(
 ): AsyncGenerator<Share> {
   const worker = new SSSWorker()
   const terminationToken = Symbol('Termination')
-  if (signal) {
-    signal.onabort = () => worker.terminate()
-  }
+  signal?.addEventListener('abort', () => worker.terminate())
+
   const cmd: ShareCommand = { cmd: 'share', sss: JSON.stringify(sss), xValues }
   let receivedCount = 0
   worker.postMessage(cmd)
@@ -36,6 +35,8 @@ export async function* shares(
   while (receivedCount < xValues.length) {
     const rcvPromise = new Promise((resolve: (arg0: Share) => void, reject) => {
       const terminationCallback = () => reject(terminationToken)
+      signal?.addEventListener('abort', terminationCallback)
+
       worker.onmessage = async (e) => {
         try {
           const share = await new ShareDecoder().decode(e.data)
@@ -46,17 +47,13 @@ export async function* shares(
           throw ex
         }
       }
-      signal?.addEventListener('abort', terminationCallback)
       worker.onerror = (error) => {
         reject(error)
       }
     })
     try {
-      console.time('Receiving worker')
       const nextResult = await rcvPromise
-      console.timeLog('Receiving worker')
       yield nextResult
-      console.timeEnd('Receiving worker')
     } catch (ex) {
       if (ex === terminationToken) {
         return
