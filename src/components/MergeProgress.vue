@@ -2,11 +2,14 @@
   <div class="resultBox">
     <Transition name="resultBox">
       <v-progress-circular
-        v-if="typeof decrypted !== 'string'"
-        type="circle"
+        v-if="!isDecrypted"
         class="progressCircle"
         :model-value="progressPercentage"
-      />
+        :size="70"
+        :width="10"
+      >
+        {{ progressPercentage }}%
+      </v-progress-circular>
       <span v-else class="resultText">
         {{ decrypted }}
       </span>
@@ -19,6 +22,8 @@ const props = defineProps<{
   decrypted: string | null
   progressRatio: [number, number]
 }>()
+
+const isDecrypted = computed(() => typeof props.decrypted === 'string')
 
 const progressPercentage = computed(() =>
   Math.min(Math.round((props.progressRatio[0] / props.progressRatio[1]) * 100), 100)
