@@ -10,9 +10,8 @@
       Public key:
       <key-display :ckey="pubkey" />
     </div>
-    <div>
-      Shares:
-      <v-text-field type="number" v-model="shareCount" :min="1" :max="256" />
+    <div style="width: 100%">
+      <v-text-field label="Shares" type="number" v-model="shareCount" :min="1" :max="255" />
     </div>
     <v-textarea
       v-model="candidate_text"
@@ -24,8 +23,13 @@
       resize="none"
     />
     <v-btn circle :icon="mdiPlus" @click="addCandidate" />
-    <TransitionGroup name="list" tag="div">
-      <div v-for="{ index } in sorted_shares" :key="inputID[index]" class="shareInputBox">
+    <TransitionGroup name="list" tag="div" style="width: 100%">
+      <div
+        style="width: 100%"
+        v-for="{ index } in sorted_shares"
+        :key="inputID[index]"
+        class="shareInputBox"
+      >
         <v-btn circle :icon="mdiMinus" size="small" @click="dropCandidate(index)" />
         <share-input :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
       </div>

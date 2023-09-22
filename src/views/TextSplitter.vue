@@ -162,10 +162,11 @@ async function createShares(
 ) {
   const xValues = [...new Array(shareCount)].map((bla, index) => index + startIndex)
   for await (const sh of sharesWorker(shareGen, xValues, { signal: abortSignal })) {
+    let signature
     if (signingKeyPair !== undefined) {
-      await sign(sh, signingKeyPair)
+      signature = await sign(sh, signingKeyPair)
     }
-    const encodedShare = await new ShareEncoder().encode(sh)
+    const encodedShare = await new ShareEncoder().encode(sh, signature)
     if (abortSignal.aborted) return
     callback(encodedShare, sh.xValue as number)
   }

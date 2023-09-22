@@ -1,6 +1,6 @@
 <template>
-  <div class="shareElement">
-    <v-text-field type="number" v-model="key_id" />
+  <div class="shareElement" style="width: 100%">
+    <v-text-field style="width: 1em" type="number" v-model="key_id" />
     <v-text-field v-model="data" />
     <v-icon
       :color="SignatureIconColorMap[signatureStatus]"
@@ -25,7 +25,7 @@ import {
   mdiCheckboxMarkedCircle,
   mdiChatQuestion,
   mdiCpu64Bit,
-  mdiCross
+  mdiLightningBoltCircle
 } from '@mdi/js'
 
 const props = defineProps<{ raw?: string }>()
@@ -43,11 +43,11 @@ const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
   Verified: 'green'
 }
 const SignatureIconMap: { [K in SignatureStatus]: string } = {
-  '?': mdiCloseCircle,
-  Corrupt: mdiCheckboxMarkedCircle,
-  Loading: mdiChatQuestion,
-  Rejected: mdiCpu64Bit,
-  Verified: mdiCross
+  '?': mdiChatQuestion,
+  Corrupt: mdiLightningBoltCircle,
+  Loading: mdiCpu64Bit,
+  Rejected: mdiCloseCircle,
+  Verified: mdiCheckboxMarkedCircle
 }
 
 const key_id = ref(undefined as undefined | number)
