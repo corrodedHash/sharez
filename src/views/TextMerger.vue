@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { ElInputNumber, ElButton, ElInput } from 'element-plus'
 import { computed, ref, watch } from 'vue'
-import { Share } from 'sharez'
+import { type DecodedShare } from 'sharez'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
 import KeyDisplay from '@/components/KeyDisplay.vue'
@@ -46,7 +46,7 @@ import { ObsoleteResolve, last } from '@/util/lastEval'
 
 const inputID = [] as number[]
 let lastInputID = 0
-const shares = ref<(Share | undefined)[]>([])
+const shares = ref<(DecodedShare | undefined)[]>([])
 const sharesRaw = ref<string[]>([])
 
 const shareCount = ref(2)
@@ -83,7 +83,7 @@ function dropCandidate(index: number) {
   shares.value.splice(index, 1)
 }
 
-function updateShare(index: number, share: Share | undefined) {
+function updateShare(index: number, share: DecodedShare | undefined) {
   shares.value.splice(index, 1, share)
 }
 
@@ -93,7 +93,7 @@ const decryption_errored = computed(() =>
 
 const relevant_share_data = computed(() =>
   shares.value.map((v): [number, Uint8Array] | undefined =>
-    v?.xValue === undefined ? undefined : [v.xValue, v.yValues]
+    v?.share.xValue === undefined ? undefined : [v.share.xValue, v.share.yValues]
   )
 )
 
@@ -201,10 +201,10 @@ function sortedCounts<T>(countedArray: T[]): [T, number][] {
 watch(
   shares,
   (s) => {
-    const pubkeys = sortedCounts(s.map((v) => v?.pubkey)).filter(
+    const pubkeys = sortedCounts(s.map((v) => v?.signature?.pubkey)).filter(
       (v): v is [CryptoKey, number] => v[0] !== undefined
     )
-    const req_counts = sortedCounts(s.map((v) => v?.requirement)).filter(
+    const req_counts = sortedCounts(s.map((v) => v?.share.requirement)).filter(
       (v): v is [number, number] => v[0] !== undefined
     )
     if (req_counts.length === 1) {
@@ -223,11 +223,11 @@ const sorted_shares = computed(() => {
   return shares.value
     .map((v, i) => ({ index: i, element: v }))
     .sort((a, b) =>
-      a.element?.xValue === undefined
+      a.element?.share.xValue === undefined
         ? 1
-        : b.element?.xValue === undefined
+        : b.element?.share.xValue === undefined
         ? -1
-        : a.element.xValue - b.element.xValue
+        : a.element.share.xValue - b.element.share.xValue
     )
 })
 </script>

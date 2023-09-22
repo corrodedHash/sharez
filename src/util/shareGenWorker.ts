@@ -1,4 +1,4 @@
-import { SSS, Share, ShareEncoder } from 'sharez'
+import { SSS, type Share, ShareEncoder } from 'sharez'
 
 export interface GeneratorCommand {
   cmd: 'generator'
@@ -37,7 +37,10 @@ onmessage = async (e) => {
       break
     }
     case 'recover': {
-      const shares = d.info.map(([data, xValue]) => new Share(data, { xValue }))
+      const shares: Share[] = d.info.map(([data, xValue]) => ({
+        yValues: data,
+        xValue
+      }))
       postMessage(JSON.stringify(SSS.from_shares(shares)))
       break
     }

@@ -29,12 +29,13 @@ import {
   Failed
 } from '@element-plus/icons-vue'
 import { ObsoleteResolve, last } from '@/util/lastEval'
-import { Share, ShareDecoder, ShareEncoder } from 'sharez'
+import { type DecodedShare, ShareDecoder, ShareEncoder } from 'sharez'
+import { verify } from 'sharez'
 
 const props = defineProps<{ raw?: string }>()
 
 const emits = defineEmits<{
-  (e: 'shareUpdate', share: Share | undefined): void
+  (e: 'shareUpdate', share: DecodedShare | undefined): void
 }>()
 
 type SignatureStatus = '?' | 'Loading' | 'Corrupt' | 'Verified' | 'Rejected'
@@ -48,21 +49,21 @@ const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
 
 const key_id = ref(undefined as undefined | number)
 const data = ref('')
-const share = ref<Share | undefined>()
+const share = ref<DecodedShare | undefined>()
 const signatureStatus = ref<SignatureStatus | undefined>()
 
 data.value = props.raw || ''
 
-const calculateSignatureStatus = last(async function (s: Share | undefined) {
-  if (s === undefined) {
+const calculateSignatureStatus = last(async function (s: DecodedShare | undefined) {
+  if (s?.signature === undefined) {
     return undefined
   }
-  if (s.signature === undefined) {
+  if (s?.signature === undefined) {
     return '?'
   }
 
   try {
-    const v = await s.verify()
+    const v = await verify(s.share, s.signature)
     return v ? 'Verified' : 'Rejected'
   } catch {
     return 'Corrupt'
@@ -82,7 +83,7 @@ watch(share, async (s) => {
 watch(share, async (s) => {
   emits('shareUpdate', s)
   if (s === undefined) return
-  data.value = await new ShareEncoder().encode(s)
+  data.value = await new ShareEncoder().encode(s.share, s.signature)
 })
 const shareFromString = last(async (d: string) => {
   return await new ShareDecoder().decode(d).catch((e) => {
@@ -101,14 +102,14 @@ watch(
       else console.warn(e)
       return
     }
-    key_id.value = share.value?.xValue
+    key_id.value = share.value?.share.xValue
   },
   { immediate: true }
 )
 
 watch(key_id, (k) => {
   if (share.value === undefined) return
-  share.value.xValue = k
+  share.value.share.xValue = k
 })
 </script>
 

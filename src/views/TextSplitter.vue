@@ -66,7 +66,7 @@ import { ref, watch } from 'vue'
 import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
 import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import OutputBox from '@/components/OutputBox.vue'
-import { SSS, ShareEncoder, generateKeyPair, fromRawPrivateKey } from 'sharez'
+import { SSS, ShareEncoder, generateKeyPair, fromRawPrivateKey, sign } from 'sharez'
 import { fromBase64String, toBase64String } from '@/util/basic'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 
@@ -145,7 +145,7 @@ async function createShares(
   const xValues = [...new Array(shareCount)].map((bla, index) => index + startIndex)
   for await (const sh of sharesWorker(shareGen, xValues, { signal: abortSignal })) {
     if (signingKeyPair !== undefined) {
-      await sh.sign(signingKeyPair)
+      await sign(sh, signingKeyPair)
     }
     const encodedShare = await new ShareEncoder().encode(sh)
     if (abortSignal.aborted) return
@@ -208,7 +208,7 @@ watch(
     try {
       shares_loading.value = true
       shares.value = []
-      await generateShares(s, signingKeyPair)
+      await generateShares(s as SSS, signingKeyPair)
       shares.value = shares.value.sort(([a], [b]) => a - b)
       shares_loading.value = false
     } catch (e) {
@@ -228,7 +228,7 @@ watch(
     try {
       extra_shares_loading.value = true
       extraShares.value = []
-      await generateExtraShares(s, extraShareCount, signingKeyPair)
+      await generateExtraShares(s as SSS, extraShareCount, signingKeyPair)
       extraShares.value = extraShares.value.sort(([a], [b]) => a - b)
       extra_shares_loading.value = false
     } catch (e) {

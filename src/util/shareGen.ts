@@ -1,4 +1,4 @@
-import { SSS, Share, ShareDecoder } from 'sharez'
+import { SSS, ShareDecoder, type Share } from 'sharez'
 import SSSWorker from './shareGenWorker?worker'
 import { type GeneratorCommand, type RecoverCommand, type ShareCommand } from './shareGenWorker'
 
@@ -40,7 +40,7 @@ export async function* shares(
       worker.onmessage = async (e) => {
         try {
           const share = await new ShareDecoder().decode(e.data)
-          resolve(share)
+          resolve(share.share)
           signal?.removeEventListener('abort', terminationCallback)
         } catch (ex) {
           console.warn('Share creator sent weird data', e, ex)
