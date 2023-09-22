@@ -1,12 +1,11 @@
 <template>
   <div class="resultBox">
     <Transition name="resultBox">
-      <el-progress
+      <v-progress-circular
         v-if="typeof decrypted !== 'string'"
         type="circle"
         class="progressCircle"
-        :status="undefined"
-        :percentage="progressPercentage"
+        :model-value="progressPercentage"
       />
       <span v-else class="resultText">
         {{ decrypted }}
@@ -16,7 +15,6 @@
 </template>
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ElProgress } from 'element-plus'
 const props = defineProps<{
   decrypted: string | null
   progressRatio: [number, number]

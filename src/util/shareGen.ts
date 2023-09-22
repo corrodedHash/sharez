@@ -19,49 +19,75 @@ export async function createGen(text: string, count: number): Promise<SSS> {
   })
 }
 
+/** Wraps a worker in an iterator, such that we can iterate over promises of the next message of the worker
+ *
+ * @param worker The web worker that should be wrapped
+ * @returns A `next` function, which can be called to await the next message
+ */
+function continuousWorkerMessages<T>(worker: Worker): { next(): Promise<T> } {
+  const conditionVariable = {
+    hit: undefined as undefined | ((v: T) => void),
+    abort: undefined as undefined | ((e: any) => void)
+  }
+  const resolvedShares = [] as T[]
+
+  worker.addEventListener('message', (e) => {
+    resolvedShares.push(e.data)
+    if (conditionVariable.hit !== undefined) {
+      const c = conditionVariable.hit
+      conditionVariable.hit = undefined
+      conditionVariable.abort = undefined
+      c(e.data)
+    }
+  })
+
+  worker.addEventListener('error', (e) => {
+    if (conditionVariable.abort !== undefined) conditionVariable.abort(e)
+    console.warn('Worker encountered error')
+  })
+
+  const next = () =>
+    new Promise((resolve: (arg0: T) => void, reject) => {
+      console.assert(conditionVariable.hit === undefined)
+      const r = resolvedShares.pop()
+      if (r !== undefined) {
+        resolve(r)
+        return
+      }
+      conditionVariable.hit = (v) => {
+        const g = resolvedShares.pop()
+        console.assert(g === v, `${g} != ${v}`)
+        resolve(v)
+      }
+      conditionVariable.abort = reject
+    })
+  return {
+    next
+  }
+}
+
 export async function* shares(
   sss: SSS,
   xValues: number[],
   { signal }: { signal?: AbortSignal } = {}
 ): AsyncGenerator<Share> {
   const worker = new SSSWorker()
-  const terminationToken = Symbol('Termination')
+  const { next: nextWorkerMessage } = continuousWorkerMessages<string>(worker)
+
   signal?.addEventListener('abort', () => worker.terminate())
 
   const cmd: ShareCommand = { cmd: 'share', sss: JSON.stringify(sss), xValues }
-  let receivedCount = 0
   worker.postMessage(cmd)
 
-  while (receivedCount < xValues.length) {
-    const rcvPromise = new Promise((resolve: (arg0: Share) => void, reject) => {
-      const terminationCallback = () => reject(terminationToken)
-      signal?.addEventListener('abort', terminationCallback)
-
-      worker.onmessage = async (e) => {
-        try {
-          const share = await new ShareDecoder().decode(e.data)
-          resolve(share.share)
-          signal?.removeEventListener('abort', terminationCallback)
-        } catch (ex) {
-          console.warn('Share creator sent weird data', e, ex)
-          throw ex
-        }
-      }
-      worker.onerror = (error) => {
-        reject(error)
-      }
-    })
-    try {
-      const nextResult = await rcvPromise
-      yield nextResult
-    } catch (ex) {
-      if (ex === terminationToken) {
-        return
-      } else {
-        throw ex
-      }
+  for (let i = 0; i < xValues.length; i += 1) {
+    const rcvPromise = nextWorkerMessage().then((v) =>
+      new ShareDecoder().decode(v).then((v) => v.share)
+    )
+    const nextResult = await rcvPromise
+    yield nextResult
+    if (signal !== undefined && signal.aborted) {
+      return
     }
-    receivedCount += 1
   }
 }
 

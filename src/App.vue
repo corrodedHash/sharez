@@ -1,25 +1,18 @@
 <template>
-  <el-container>
-    <el-header>
-      <el-switch
-        v-model="onShare"
-        :active-icon="Scissor"
-        :inactive-icon="Key"
-        inline-prompt
-      ></el-switch>
-    </el-header>
-    <el-main>
+  <v-layout class="rounded rounded-md">
+    <v-app-bar>
+      <v-switch v-model="onShare"></v-switch>
+    </v-app-bar>
+    <v-main class="d-flex align-center justify-center">
       <keep-alive>
         <component :is="onShare ? TextSplitter : TextMerger" />
       </keep-alive>
-    </el-main>
-  </el-container>
+    </v-main>
+  </v-layout>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { Key, Scissor } from '@element-plus/icons-vue'
-import { ElHeader, ElSwitch, ElContainer, ElMain } from 'element-plus'
 import TextSplitter from './views/TextSplitter.vue'
 import TextMerger from './views/TextMerger.vue'
 

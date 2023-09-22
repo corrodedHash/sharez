@@ -3,16 +3,15 @@
     {{ props.value }}
     <Transition name="copy">
       <span v-if="recentlyCopied !== null" class="copyNotification">
-        <el-icon><CopyDocument /></el-icon>
+        <v-icon :icon="mdiContentCopy"></v-icon>
       </span>
     </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ElIcon } from 'element-plus'
-import { CopyDocument } from '@element-plus/icons-vue'
 import { ref } from 'vue'
+import { mdiContentCopy } from '@mdi/js'
 
 const props = defineProps<{ value: string }>()
 const recentlyCopied = ref(null as null | number)

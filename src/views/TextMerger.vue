@@ -12,21 +12,21 @@
     </div>
     <div>
       Shares:
-      <el-input-number v-model="shareCount" type="number" :min="1" :max="256" />
+      <v-text-field type="number" v-model="shareCount" :min="1" :max="256" />
     </div>
-    <el-input
+    <v-textarea
       v-model="candidate_text"
+      no-resize
       style="white-space: nowrap"
-      :autosize="{ minRows: 2, maxRows: 10 }"
       :autofocus="true"
       type="textarea"
       placeholder="shrz:..."
       resize="none"
     />
-    <el-button circle :icon="Plus" @click="addCandidate" />
+    <v-btn circle :icon="mdiPlus" @click="addCandidate" />
     <TransitionGroup name="list" tag="div">
       <div v-for="{ index } in sorted_shares" :key="inputID[index]" class="shareInputBox">
-        <el-button circle :icon="Minus" size="small" @click="dropCandidate(index)" />
+        <v-btn circle :icon="mdiMinus" size="small" @click="dropCandidate(index)" />
         <share-input :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
       </div>
     </TransitionGroup>
@@ -34,13 +34,12 @@
 </template>
 
 <script setup lang="ts">
-import { ElInputNumber, ElButton, ElInput } from 'element-plus'
+import { mdiPlus, mdiMinus } from '@mdi/js'
 import { computed, ref, watch } from 'vue'
 import { type DecodedShare } from 'sharez'
 import ShareInput from '@/components/ShareInput.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
 import KeyDisplay from '@/components/KeyDisplay.vue'
-import { Plus, Minus } from '@element-plus/icons-vue'
 import { getSecret as getSecretGenerator } from '@/util/shareGen'
 import { ObsoleteResolve, last } from '@/util/lastEval'
 

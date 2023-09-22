@@ -1,36 +1,55 @@
 <template>
   <div class="container">
-    <el-slider
+    <v-slider
       v-model.number="shareCount"
       type="range"
       :step="1"
       :min="1"
       :max="255"
-      :show-tooltip="false"
-      show-input
+      thumb-label="always"
       size="small"
-    /><el-slider
+    >
+      <!-- <template v-slot:append>
+        <v-text-field
+          v-model.number="shareCount"
+          hide-details
+          single-line
+          density="compact"
+          type="number"
+          style="width: 70px"
+        ></v-text-field>
+      </template> -->
+    </v-slider>
+    <v-slider
       v-model.number="extraShareCount"
       type="range"
       :step="1"
       :min="0"
       :max="255 - shareCount"
-      :show-tooltip="false"
-      show-input
+      thumb-label="always"
       size="small"
-    />
-    <el-input v-model="sharedText" type="text" />
-    <el-switch v-model="showTextbox" />
+    >
+      <!-- <template v-slot:append>
+        <v-text-field
+          v-model.number="extraShareCount"
+          hide-details
+          single-line
+          density="compact"
+          type="number"
+          style="width: 70px"
+        ></v-text-field>
+      </template> -->
+    </v-slider>
+    <v-textarea no-resize v-model="sharedText" type="text" />
+    <v-switch v-model="showTextbox" />
     <div class="privateKeyBox">
-      <el-input v-model="privateKey" type="text">
-        <template #suffix>
-          <el-icon v-if="privateKey !== ''">
-            <circle-close-filled v-if="signingKeyPair === undefined" />
-            <circle-check-filled v-else />
-          </el-icon>
+      <v-text-field v-model="privateKey" type="text">
+        <template #label v-if="privateKey !== ''">
+          <v-icon :icon="mdiCloseCircle" v-if="signingKeyPair === undefined" />
+          <v-icon :icon="mdiCheckCircle" v-else />
         </template>
-      </el-input>
-      <el-button :icon="CirclePlusFilled" circle @click="createKeyPair" />
+      </v-text-field>
+      <v-btn :icon="mdiPlusCircle" @click="createKeyPair" />
     </div>
     <div v-if="!shamir_loading && shares_loading">Calculating shares...</div>
     <div v-if="!shamir_loading && !shares_loading && extra_shares_loading">
@@ -63,8 +82,6 @@
 </template>
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ElSlider, ElInput, ElButton, ElIcon, ElSwitch } from 'element-plus'
-import { CirclePlusFilled, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import OutputBox from '@/components/OutputBox.vue'
 import { SSS, ShareEncoder, generateKeyPair, fromRawPrivateKey, sign } from 'sharez'
 import { fromBase64String, toBase64String } from '@/util/basic'
@@ -72,6 +89,7 @@ import { ObsoleteResolve, last } from '@/util/lastEval'
 
 import '@/util/shareGen'
 import { createGen, shares as sharesWorker } from '@/util/shareGen'
+import { mdiCheckCircle, mdiCloseCircle, mdiPlusCircle } from '@mdi/js'
 
 const showTextbox = ref(false)
 

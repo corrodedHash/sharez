@@ -1,36 +1,32 @@
 <template>
   <div class="shareElement">
-    <el-input-number v-model="key_id" :min="1" size="small" />
-    <el-input v-model="data" />
-    <el-icon
+    <v-text-field type="number" v-model="key_id" />
+    <v-text-field v-model="data" />
+    <v-icon
       :color="SignatureIconColorMap[signatureStatus]"
+      :icon="SignatureIconMap[signatureStatus]"
       class="no-inherit"
       style="margin-left: 0.2em"
       size="large"
       v-if="signatureStatus !== undefined"
-    >
-      <SuccessFilled v-if="signatureStatus === 'Verified'" />
-      <CircleCloseFilled v-if="signatureStatus === 'Rejected'" />
-      <QuestionFilled v-if="signatureStatus === '?'" />
-      <Cpu is-loading v-if="signatureStatus === 'Loading'" />
-      <Failed v-if="signatureStatus === 'Corrupt'" />
-    </el-icon>
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ElInput, ElInputNumber, ElIcon } from 'element-plus'
-import {
-  SuccessFilled,
-  QuestionFilled,
-  CircleCloseFilled,
-  Cpu,
-  Failed
-} from '@element-plus/icons-vue'
+
 import { ObsoleteResolve, last } from '@/util/lastEval'
 import { type DecodedShare, ShareDecoder, ShareEncoder } from 'sharez'
 import { verify } from 'sharez'
+
+import {
+  mdiCloseCircle,
+  mdiCheckboxMarkedCircle,
+  mdiChatQuestion,
+  mdiCpu64Bit,
+  mdiCross
+} from '@mdi/js'
 
 const props = defineProps<{ raw?: string }>()
 
@@ -45,6 +41,13 @@ const SignatureIconColorMap: { [K in SignatureStatus]: string } = {
   Loading: '#409EFC',
   Rejected: 'red',
   Verified: 'green'
+}
+const SignatureIconMap: { [K in SignatureStatus]: string } = {
+  '?': mdiCloseCircle,
+  Corrupt: mdiCheckboxMarkedCircle,
+  Loading: mdiChatQuestion,
+  Rejected: mdiCpu64Bit,
+  Verified: mdiCross
 }
 
 const key_id = ref(undefined as undefined | number)
