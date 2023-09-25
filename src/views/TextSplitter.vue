@@ -1,56 +1,9 @@
 <template>
   <div class="container">
-    <v-slider
-      v-model.number="shareCount"
-      type="range"
-      :step="1"
-      :min="1"
-      :max="255"
-      thumb-label="always"
-      size="small"
-    >
-      <!-- <template v-slot:append>
-        <v-text-field
-          v-model.number="shareCount"
-          hide-details
-          single-line
-          density="compact"
-          type="number"
-          style="width: 70px"
-        ></v-text-field>
-      </template> -->
-    </v-slider>
-    <v-slider
-      v-model.number="extraShareCount"
-      type="range"
-      :step="1"
-      :min="0"
-      :max="255 - shareCount"
-      thumb-label="always"
-      size="small"
-    >
-      <!-- <template v-slot:append>
-        <v-text-field
-          v-model.number="extraShareCount"
-          hide-details
-          single-line
-          density="compact"
-          type="number"
-          style="width: 70px"
-        ></v-text-field>
-      </template> -->
-    </v-slider>
+    <SplitParametersVue @update:model-value="updateSettings" />
     <v-textarea no-resize v-model="sharedText" type="text" />
+
     <v-switch v-model="showTextbox" />
-    <div class="privateKeyBox">
-      <v-text-field v-model="privateKey" type="text">
-        <template #label v-if="privateKey !== ''">
-          <v-icon :icon="mdiCloseCircle" v-if="signingKeyPair === undefined" />
-          <v-icon :icon="mdiCheckCircle" v-else />
-        </template>
-      </v-text-field>
-      <v-btn :icon="mdiPlusCircle" @click="createKeyPair" />
-    </div>
 
     <div v-if="shamir_loading">Calculating polynomials...</div>
     <template v-if="!shamir_loading">
@@ -59,7 +12,14 @@
         Calculating extra shares ({{ extraShares.length }}/{{ extraShareCount }})...
       </div>
       <template v-if="showTextbox">
-        <v-btn :append-icon="mdiDownload" size="x-large" :disabled="!creation_finished" @click="download()"> Download</v-btn>
+        <v-btn
+          :append-icon="mdiDownload"
+          size="x-large"
+          :disabled="!creation_finished"
+          @click="download()"
+        >
+          Download</v-btn
+        >
         <div class="noLinebreaks outputBox">
           {{
             shares
@@ -87,14 +47,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import OutputBox from '@/components/OutputBox.vue'
-import { SSS, ShareEncoder, generateKeyPair, fromRawPrivateKey, sign } from 'sharez'
-import { fromBase64String, toBase64String } from '@/util/basic'
-import { ObsoleteResolve, last } from '@/util/lastEval'
+import { SSS, ShareEncoder, sign } from 'sharez'
+import { ObsoleteResolve } from '@/util/lastEval'
 
 import '@/util/shareGen'
 import { createGen, shares as sharesWorker } from '@/util/shareGen'
-import { mdiCheckCircle, mdiCloseCircle, mdiPlusCircle, mdiDownload } from '@mdi/js'
+import { mdiDownload } from '@mdi/js'
 import { computed } from 'vue'
+import SplitParametersVue from '@/components/SplitParameters.vue'
 
 const showTextbox = ref(false)
 
@@ -111,9 +71,18 @@ const extra_shares_loading = ref(false)
 const shamir_gen = ref<SSS>(SSS.from_secret(Uint8Array.from([0]), 1))
 const shamir_loading = ref(false)
 
+type CryptoKeyPair = { publicKey: CryptoKey; privateKey: CryptoKey }
+const signingKeyPair = ref<CryptoKeyPair | undefined>(undefined)
+
 const creation_finished = computed(
   () => !(shamir_loading.value || shares_loading.value || extra_shares_loading.value)
 )
+
+const updateSettings = (s: any) => {
+  shareCount.value = s.shareCount
+  extraShareCount.value = s.extraShareCount
+  signingKeyPair.value = s.signingKeyPair
+}
 
 const download = () => {
   if (!creation_finished.value) {
@@ -137,9 +106,17 @@ const download = () => {
   window.URL.revokeObjectURL(url)
 }
 
-const lastCreateGen = last(async (text: string, count: number) => {
-  return await createGen(text, count)
-})
+const lastCreateGen = (function () {
+  let abortController = [new AbortController()]
+  return async (text: string, count: number) => {
+    abortController[0].abort()
+    const myAbortController = new AbortController()
+    abortController[0] = myAbortController
+    const generator = await createGen(text, count, { signal: myAbortController.signal })
+    if (myAbortController.signal.aborted) throw new ObsoleteResolve()
+    return generator
+  }
+})()
 
 watch(
   [sharedText, shareCount],
@@ -157,32 +134,6 @@ watch(
   },
   { immediate: true }
 )
-type CryptoKeyPair = { publicKey: CryptoKey; privateKey: CryptoKey }
-const privateKey = ref('')
-const signingKeyPair = ref<CryptoKeyPair | undefined>(undefined)
-
-async function createKeyPair() {
-  const kp = await generateKeyPair()
-  privateKey.value = toBase64String(
-    new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey))
-  )
-}
-
-const loadKeyPair = last(async (privateKey: string): Promise<CryptoKeyPair | undefined> => {
-  let privateKey_raw
-  try {
-    privateKey_raw = fromBase64String(privateKey)
-  } catch {
-    return undefined
-  }
-  try {
-    const v = await fromRawPrivateKey(privateKey_raw)
-    return v
-  } catch (e) {
-    return undefined
-  }
-})
-
 async function createShares(
   startIndex: number,
   shareCount: number,
@@ -243,14 +194,6 @@ const generateExtraShares = (function () {
     if (myController.signal.aborted) throw new ObsoleteResolve('')
   }
 })()
-
-watch(privateKey, async (privateKey) => {
-  const result = await loadKeyPair(privateKey)
-  signingKeyPair.value = result
-  if (result === undefined) {
-    console.log('Incorrect private key')
-  }
-})
 
 watch(
   [shamir_gen, signingKeyPair],

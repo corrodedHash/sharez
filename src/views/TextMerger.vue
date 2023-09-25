@@ -22,21 +22,19 @@
       placeholder="shrz:..."
       resize="none"
     />
-    <v-btn circle :icon="mdiPlus" @click="insertTextCandidates" />
+    <v-btn block rounded class="mb-4" :icon="mdiPlus" @click="insertTextCandidates" />
     <v-file-input
+      class="w-100"
+      density="compact"
+      block
       v-if="!files_loading"
       v-model="candidate_files"
       accept="text/plain"
       multiple
-    ></v-file-input>
+    />
     <v-progress-circular indeterminate v-if="files_loading"></v-progress-circular>
     <TransitionGroup name="list" tag="div" style="width: 100%">
-      <div
-        style="width: 100%"
-        v-for="{ index } in sorted_shares"
-        :key="inputID[index]"
-        class="shareInputBox"
-      >
+      <div v-for="{ index } in sorted_shares" :key="inputID[index]" class="shareInputBox w-100">
         <v-btn circle :icon="mdiMinus" size="small" @click="dropCandidate(index)" />
         <share-input :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
       </div>

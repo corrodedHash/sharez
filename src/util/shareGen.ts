@@ -1,13 +1,22 @@
 import { SSS, type Share } from 'sharez'
 import SSSWorker from './shareGenWorker?worker'
 import { type GeneratorCommand, type RecoverCommand, type ShareCommand } from './shareGenWorker'
+import { ObsoleteResolve } from './lastEval'
 
-export async function createGen(text: string, count: number): Promise<SSS> {
+export async function createGen(
+  text: string,
+  count: number,
+  { signal }: { signal?: AbortSignal }
+): Promise<SSS> {
   const encoder = new TextEncoder()
   const secret = encoder.encode(text)
-  return await new Promise((resolve) => {
+  return await new Promise((resolve, reject) => {
     const worker = new SSSWorker()
     const cmd: GeneratorCommand = { cmd: 'generator', secret, count }
+    signal?.addEventListener('abort', () => {
+      worker.terminate()
+      reject(new ObsoleteResolve())
+    })
     worker.onmessage = (e) => {
       try {
         resolve(SSS.from_json(e.data))
