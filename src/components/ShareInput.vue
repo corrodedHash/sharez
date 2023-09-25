@@ -1,15 +1,16 @@
 <template>
   <div class="shareElement" style="width: 100%">
     <v-text-field style="width: 1em" type="number" v-model="key_id" />
-    <v-text-field v-model="data" />
-    <v-icon
-      :color="SignatureIconColorMap[signatureStatus]"
-      :icon="SignatureIconMap[signatureStatus]"
-      class="no-inherit"
-      style="margin-left: 0.2em"
-      size="large"
-      v-if="signatureStatus !== undefined"
-    />
+    <v-text-field v-model="data">
+      <template #append-inner>
+        <v-icon
+          :color="SignatureIconColorMap[signatureStatus]"
+          :icon="SignatureIconMap[signatureStatus]"
+          style="margin-left: 0.2em"
+          size="large"
+          v-if="signatureStatus !== undefined"
+      /></template>
+    </v-text-field>
   </div>
 </template>
 

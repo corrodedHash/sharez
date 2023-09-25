@@ -51,20 +51,24 @@
       </v-text-field>
       <v-btn :icon="mdiPlusCircle" @click="createKeyPair" />
     </div>
-    <div v-if="!shamir_loading && shares_loading">Calculating shares...</div>
-    <div v-if="!shamir_loading && !shares_loading && extra_shares_loading">
-      Calculating extra shares...
-    </div>
+
     <div v-if="shamir_loading">Calculating polynomials...</div>
     <template v-if="!shamir_loading">
-      <div v-if="showTextbox" class="noLinebreaks outputBox">
-        {{
-          shares
-            .concat(extraShares)
-            .map(([, text]) => text)
-            .join('\n')
-        }}
+      <div v-if="shares_loading">Calculating shares ({{ shares.length }}/{{ shareCount }})...</div>
+      <div v-if="extra_shares_loading">
+        Calculating extra shares ({{ extraShares.length }}/{{ extraShareCount }})...
       </div>
+      <template v-if="showTextbox">
+        <v-btn :append-icon="mdiDownload" size="x-large" :disabled="!creation_finished" @click="download()"> Download</v-btn>
+        <div class="noLinebreaks outputBox">
+          {{
+            shares
+              .concat(extraShares)
+              .map(([, text]) => text)
+              .join('\n')
+          }}
+        </div>
+      </template>
       <transition-group
         v-if="sharedText.length > 0 && !showTextbox"
         name="el-zoom-in-top"
@@ -89,7 +93,8 @@ import { ObsoleteResolve, last } from '@/util/lastEval'
 
 import '@/util/shareGen'
 import { createGen, shares as sharesWorker } from '@/util/shareGen'
-import { mdiCheckCircle, mdiCloseCircle, mdiPlusCircle } from '@mdi/js'
+import { mdiCheckCircle, mdiCloseCircle, mdiPlusCircle, mdiDownload } from '@mdi/js'
+import { computed } from 'vue'
 
 const showTextbox = ref(false)
 
@@ -105,6 +110,32 @@ const extra_shares_loading = ref(false)
 
 const shamir_gen = ref<SSS>(SSS.from_secret(Uint8Array.from([0]), 1))
 const shamir_loading = ref(false)
+
+const creation_finished = computed(
+  () => !(shamir_loading.value || shares_loading.value || extra_shares_loading.value)
+)
+
+const download = () => {
+  if (!creation_finished.value) {
+    console.warn('Share creation incomplete')
+    return
+  }
+  const shareText = [
+    ...shares.value.map(([, v]) => v),
+    ...extraShares.value.map(([, v]) => v)
+  ].join('\n')
+  const file = new File([shareText], `shares-${new Date().toISOString()}.txt`, {
+    type: 'text/plain'
+  })
+  const url = URL.createObjectURL(file)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = file.name
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
 
 const lastCreateGen = last(async (text: string, count: number) => {
   return await createGen(text, count)
@@ -287,5 +318,6 @@ watch(
   padding: 1em;
   margin-top: 1em;
   font-family: mono;
+  max-height: 10em;
 }
 </style>

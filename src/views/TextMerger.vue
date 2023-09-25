@@ -22,7 +22,14 @@
       placeholder="shrz:..."
       resize="none"
     />
-    <v-btn circle :icon="mdiPlus" @click="addCandidate" />
+    <v-btn circle :icon="mdiPlus" @click="insertTextCandidates" />
+    <v-file-input
+      v-if="!files_loading"
+      v-model="candidate_files"
+      accept="text/plain"
+      multiple
+    ></v-file-input>
+    <v-progress-circular indeterminate v-if="files_loading"></v-progress-circular>
     <TransitionGroup name="list" tag="div" style="width: 100%">
       <div
         style="width: 100%"
@@ -46,7 +53,7 @@ import MergeProgress from '@/components/MergeProgress.vue'
 import KeyDisplay from '@/components/KeyDisplay.vue'
 import { getSecret as getSecretGenerator } from '@/util/shareGen'
 import { ObsoleteResolve, last } from '@/util/lastEval'
-
+import type { VTextarea } from 'vuetify/components'
 const inputID = [] as number[]
 let lastInputID = 0
 const shares = ref<(DecodedShare | undefined)[]>([])
@@ -55,27 +62,45 @@ const sharesRaw = ref<string[]>([])
 const shareCount = ref(2)
 const pubkey = ref(undefined as CryptoKey | undefined)
 
+const candidate_files = ref([] as File[])
+const files_loading = ref(false)
 const candidate_text = ref('')
-const candidates = computed(() =>
-  candidate_text.value
+const candidates = computed(() => getLines(candidate_text.value))
+
+watch(candidate_files, async (f) => {
+  if (candidate_files.value.length === 0) return
+  files_loading.value = true
+  setTimeout(async () => {
+    const file_readings = f.map(async (v) => {
+      const t = await v.text()
+      getLines(t).forEach((v) => addCandidate(v))
+    })
+    await Promise.all(file_readings)
+
+    candidate_files.value = []
+    files_loading.value = false
+  }, 20)
+})
+
+function getLines(text: string): string[] {
+  return text
     .split('\n')
     .map((v) => v.replace(/\s/g, ''))
     .filter((v) => v !== '')
-)
+}
 
-function addCandidate() {
+function addCandidate(c: string) {
+  lastInputID += 1
+  inputID.push(lastInputID)
+  sharesRaw.value.push(c)
+  shares.value.push(undefined)
+}
+
+function insertTextCandidates() {
   if (candidates.value.length === 0) {
-    lastInputID += 1
-    inputID.push(lastInputID)
-    sharesRaw.value.push('')
-    shares.value.push(undefined)
+    addCandidate('')
   } else {
-    for (const x of candidates.value) {
-      lastInputID += 1
-      inputID.push(lastInputID)
-      sharesRaw.value.push(x)
-      shares.value.push(undefined)
-    }
+    candidates.value.forEach((v) => addCandidate(v))
   }
   candidate_text.value = ''
 }
