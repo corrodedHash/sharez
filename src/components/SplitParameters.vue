@@ -73,6 +73,9 @@ const settings = reactive({
 })
 
 watch(settings, (s) => {
+  if (settings.shareCount > 255) settings.shareCount = 255
+  if (settings.extraShareCount > 255 - settings.shareCount)
+    settings.extraShareCount = 255 - settings.shareCount
   emits('update:model-value', unref(s))
 })
 

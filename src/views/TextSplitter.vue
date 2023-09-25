@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <SplitParametersVue @update:model-value="updateSettings" />
+    <split-parameters @update:model-value="updateSettings" />
     <v-textarea no-resize v-model="sharedText" type="text" />
 
     <v-switch v-model="showTextbox" />
@@ -50,11 +50,10 @@ import OutputBox from '@/components/OutputBox.vue'
 import { SSS, ShareEncoder, sign } from 'sharez'
 import { ObsoleteResolve } from '@/util/lastEval'
 
-import '@/util/shareGen'
 import { createGen, shares as sharesWorker } from '@/util/shareGen'
 import { mdiDownload } from '@mdi/js'
 import { computed } from 'vue'
-import SplitParametersVue from '@/components/SplitParameters.vue'
+import SplitParameters from '@/components/SplitParameters.vue'
 
 const showTextbox = ref(false)
 
