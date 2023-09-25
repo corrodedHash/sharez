@@ -3,44 +3,49 @@
     <split-parameters @update:model-value="updateSettings" />
     <v-textarea no-resize v-model="sharedText" type="text" />
 
-    <v-switch v-model="showTextbox" />
-
     <div v-if="shamir_loading">Calculating polynomials...</div>
     <template v-if="!shamir_loading">
       <div v-if="shares_loading">Calculating shares ({{ shares.length }}/{{ shareCount }})...</div>
       <div v-if="extra_shares_loading">
         Calculating extra shares ({{ extraShares.length }}/{{ extraShareCount }})...
       </div>
-      <template v-if="showTextbox">
-        <v-btn
-          :append-icon="mdiDownload"
-          size="x-large"
-          :disabled="!creation_finished"
-          @click="download()"
-        >
-          Download</v-btn
-        >
-        <div class="noLinebreaks outputBox">
-          {{
-            shares
-              .concat(extraShares)
-              .map(([, text]) => text)
-              .join('\n')
-          }}
-        </div>
-      </template>
-      <transition-group
-        v-if="sharedText.length > 0 && !showTextbox"
-        name="el-zoom-in-top"
-        tag="div"
-        class="shareBox"
-      >
-        <output-box
-          v-for="(s, index) in shares.concat(extraShares)"
-          :key="index"
-          :value="s[1] ?? 'loading'"
-        />
-      </transition-group>
+      <v-tabs v-model="outputMode" grow fixed-tabs>
+        <v-tab value="textbox">Text</v-tab>
+        <v-tab value="blocks">Blocks</v-tab>
+      </v-tabs>
+      <v-window v-model="outputMode">
+        <v-window-item value="textbox" class="pt-4">
+          <v-btn
+            :append-icon="mdiDownload"
+            size="x-large"
+            :disabled="!creation_finished"
+            @click="download()"
+            >Download</v-btn
+          >
+          <div class="noLinebreaks outputBox">
+            {{
+              shares
+                .concat(extraShares)
+                .map(([, text]) => text)
+                .join('\n')
+            }}
+          </div>
+        </v-window-item>
+        <v-window-item value="blocks">
+          <transition-group
+            v-if="sharedText.length > 0"
+            name="el-zoom-in-top"
+            tag="div"
+            class="shareBox"
+          >
+            <output-box
+              v-for="(s, index) in shares.concat(extraShares)"
+              :key="index"
+              :value="s[1] ?? 'loading'"
+            />
+          </transition-group>
+        </v-window-item>
+      </v-window>
     </template>
   </div>
 </template>
@@ -55,7 +60,7 @@ import { mdiDownload } from '@mdi/js'
 import { computed } from 'vue'
 import SplitParameters from '@/components/SplitParameters.vue'
 
-const showTextbox = ref(false)
+const outputMode = ref('')
 
 const shareCount = ref(2)
 const extraShareCount = ref(0)

@@ -3,17 +3,18 @@
     <v-app-bar class="d-flex justify-center align-center">
       <v-app-bar-title>
         Sharez
-        <template v-if="onShare">Splitting</template>
-        <template v-if="!onShare">Merging</template>
+        {{ modeTable[shamirModeIndex].name }}
       </v-app-bar-title>
       <template #append>
-        <v-btn v-if="onShare" :icon="mdiScissorsCutting" @click="onShare = !onShare" />
-        <v-btn v-if="!onShare" :icon="mdiLayersTriple" @click="onShare = !onShare"></v-btn>
+        <v-btn-toggle v-model="shamirModeIndex" mandatory variant="outlined" divided>
+          <v-btn :icon="mdiScissorsCutting" />
+          <v-btn :icon="mdiLayersTriple" />
+        </v-btn-toggle>
       </template>
     </v-app-bar>
     <v-main>
       <keep-alive>
-        <component :is="onShare ? TextSplitter : TextMerger" />
+        <component :is="modeTable[shamirModeIndex].component" />
       </keep-alive>
     </v-main>
   </v-layout>
@@ -24,7 +25,10 @@ import { ref } from 'vue'
 import TextSplitter from './views/TextSplitter.vue'
 import TextMerger from './views/TextMerger.vue'
 import { mdiLayersTriple, mdiScissorsCutting } from '@mdi/js'
-
-const onShare = ref(true)
+const shamirModeIndex = ref(0)
+const modeTable = [
+  { component: TextSplitter, name: 'Splitting' },
+  { component: TextMerger, name: 'Merging' }
+]
 </script>
 <style scoped></style>

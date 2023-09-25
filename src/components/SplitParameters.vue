@@ -33,7 +33,6 @@
           hide-details
           single-line
           density="compact"
-          size="small"
           type="number"
           style="width: 70px"
         ></v-text-field>
@@ -60,13 +59,14 @@ import { fromBase64String, toBase64String } from '@/util/basic'
 import { last } from '@/util/lastEval'
 import { mdiCheckCircle, mdiCloseCircle, mdiPlusCircle, mdiDiceMultiple } from '@mdi/js'
 import { fromRawPrivateKey, generateKeyPair } from 'sharez'
-import { reactive, ref, unref, watch } from 'vue'
+import { shallowReactive } from 'vue'
+import { ref, unref, watch } from 'vue'
 
 const emits = defineEmits<{
   (e: 'update:model-value', v: typeof settings): void
 }>()
 
-const settings = reactive({
+const settings = shallowReactive({
   shareCount: 2,
   extraShareCount: 0,
   signingKeyPair: undefined as undefined | CryptoKeyPair
