@@ -1,4 +1,4 @@
-import { SSS, type Share, ShareEncoder } from 'sharez'
+import { SSS, type Share } from 'sharez'
 
 export interface GeneratorCommand {
   cmd: 'generator'
@@ -30,9 +30,7 @@ onmessage = async (e) => {
     }
     case 'share': {
       const sss = SSS.from_json(d.sss)
-      d.xValues.forEach(async (xValue) =>
-        postMessage(await new ShareEncoder().encode(sss.share(xValue)))
-      )
+      d.xValues.forEach(async (xValue) => postMessage(sss.share(xValue)))
 
       break
     }

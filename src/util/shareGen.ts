@@ -1,4 +1,4 @@
-import { SSS, ShareDecoder, type Share } from 'sharez'
+import { SSS, type Share } from 'sharez'
 import SSSWorker from './shareGenWorker?worker'
 import { type GeneratorCommand, type RecoverCommand, type ShareCommand } from './shareGenWorker'
 
@@ -72,7 +72,7 @@ export async function* shares(
   { signal }: { signal?: AbortSignal } = {}
 ): AsyncGenerator<Share> {
   const worker = new SSSWorker()
-  const { next: nextWorkerMessage } = continuousWorkerMessages<string>(worker)
+  const { next: nextWorkerMessage } = continuousWorkerMessages<Share>(worker)
 
   signal?.addEventListener('abort', () => worker.terminate())
 
@@ -80,9 +80,7 @@ export async function* shares(
   worker.postMessage(cmd)
 
   for (let i = 0; i < xValues.length; i += 1) {
-    const rcvPromise = nextWorkerMessage().then((v) =>
-      new ShareDecoder().decode(v).then((v) => v.share)
-    )
+    const rcvPromise = nextWorkerMessage().then((v) => v)
     const nextResult = await rcvPromise
     yield nextResult
     if (signal !== undefined && signal.aborted) {
