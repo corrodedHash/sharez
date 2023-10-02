@@ -33,20 +33,22 @@
       multiple
     />
     <v-progress-circular indeterminate v-if="files_loading"></v-progress-circular>
-    <TransitionGroup name="list" tag="div" style="width: 100%">
+    <share-bundle :shares="shares" />
+    <!-- <TransitionGroup name="list" tag="div" style="width: 100%">
       <div v-for="{ index } in sorted_shares" :key="inputID[index]" class="shareInputBox w-100">
         <v-btn circle :icon="mdiMinus" size="small" @click="dropCandidate(index)" />
-        <share-input :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
+        <share-editor :raw="sharesRaw[index]" @share-update="updateShare(index, $event)" />
       </div>
-    </TransitionGroup>
+    </TransitionGroup> -->
   </div>
 </template>
 
 <script setup lang="ts">
 import { mdiPlus, mdiMinus } from '@mdi/js'
 import { computed, ref, watch } from 'vue'
-import { type DecodedShare } from 'sharez'
-import ShareInput from '@/components/ShareInput.vue'
+import { ShareDecoder, type DecodedShare } from 'sharez'
+import ShareEditor from '@/components/ShareEditor.vue'
+import ShareBundle from '@/components/ShareBundle.vue'
 import MergeProgress from '@/components/MergeProgress.vue'
 import KeyDisplay from '@/components/KeyDisplay.vue'
 import { getSecret as getSecretGenerator } from '@/util/shareGen'
@@ -88,10 +90,12 @@ function getLines(text: string): string[] {
 }
 
 function addCandidate(c: string) {
-  lastInputID += 1
-  inputID.push(lastInputID)
-  sharesRaw.value.push(c)
-  shares.value.push(undefined)
+  new ShareDecoder().decode(c).then((v) => {
+    lastInputID += 1
+    inputID.push(lastInputID)
+    sharesRaw.value.push(c)
+    shares.value.push(v)
+  })
 }
 
 function insertTextCandidates() {
@@ -134,8 +138,8 @@ const decryptSecret = (function () {
   const token = [new AbortController()]
   return async (shares: [number, Uint8Array][], count: number) => {
     token[0].abort()
-    token[0] = new AbortController()
-
+    const myController = new AbortController()
+    token[0] = myController
     if (shares.length < count) {
       decrypted.value = new Error(`Too few shares ${shares.length}/ ${count}`)
       return
@@ -160,7 +164,7 @@ const decryptSecret = (function () {
     }
 
     const combined_sss = await getSecretGenerator(joinedShares.slice(0, count))
-    if (token[0].signal.aborted) throw new ObsoleteResolve()
+    if (myController.signal.aborted) throw new ObsoleteResolve()
 
     const decoder = new TextDecoder()
     decrypted.value = decoder.decode(Uint8Array.from(combined_sss.secret))
